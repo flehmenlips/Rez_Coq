@@ -34,7 +34,9 @@ db.serialize(() => {
         const defaultSettings = [
             ['opening_hours', '09:00-22:00', 'Restaurant operating hours'],
             ['max_party_size', '10', 'Maximum party size allowed'],
-            ['time_slot_interval', '30', 'Reservation time slot interval (minutes)']
+            ['time_slot_interval', '30', 'Reservation time slot interval (minutes)'],
+            ['rolling_days', '30', 'Number of days ahead for reservations'],
+            ['rolling_update_hour', '00:00', 'Time when availability rolls forward']
         ];
         
         const stmt = db.prepare('INSERT OR IGNORE INTO settings (key, value, description) VALUES (?, ?, ?)');
@@ -47,20 +49,46 @@ db.serialize(() => {
     });
 });
 
-// Routes
-app.post('/api/reservation', (req, res) => {
-    const { date, time, guests, email, name } = req.body;
-    if (!date || !time || !guests || !email || !name) {
-        return res.status(400).send('Missing required fields');
-    }
+// Add this function before your routes
+function isDateWithinRollingWindow(date, rollingDays) {
+    const today = new Date();
+    const reservationDate = new Date(date);
+    const diffTime = reservationDate - today;
+    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+    return diffDays >= 0 && diffDays <= rollingDays;
+}
 
-    db.run(`INSERT INTO reservations (date, time, guests, email, name) VALUES (?, ?, ?, ?, ?)`, 
-        [date, time, guests, email, name], function(err) {
-        if (err) {
-            return res.status(500).send('Error saving reservation');
+// Routes
+app.post('/api/reservation', async (req, res) => {
+    const { date, time, guests, email, name } = req.body;
+    
+    // Get current settings
+    try {
+        const settings = await new Promise((resolve, reject) => {
+            db.get('SELECT value FROM settings WHERE key = "rolling_days"', (err, row) => {
+                if (err) reject(err);
+                else resolve(row);
+            });
+        });
+        
+        const rollingDays = parseInt(settings.value);
+        
+        // Validate date is within rolling window
+        if (!isDateWithinRollingWindow(date, rollingDays)) {
+            return res.status(400).send(`Reservations are only accepted up to ${rollingDays} days in advance`);
         }
-        res.send(`Reservation added with ID: ${this.lastID}`);
-    });
+        
+        // Continue with existing reservation logic
+        db.run(`INSERT INTO reservations (date, time, guests, email, name) VALUES (?, ?, ?, ?, ?)`, 
+            [date, time, guests, email, name], function(err) {
+            if (err) {
+                return res.status(500).send('Error saving reservation');
+            }
+            res.send(`Reservation added with ID: ${this.lastID}`);
+        });
+    } catch (error) {
+        res.status(500).send('Error processing reservation');
+    }
 });
 
 app.get('/api/reservations', (req, res) => {

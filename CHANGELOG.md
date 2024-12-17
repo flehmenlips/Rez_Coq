@@ -25,3 +25,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - settings
 - Static file serving for frontend
 - Form validation and error handling 
+
+## [Unreleased]
+### Added
+- Rolling availability window setting (30/60/90 days)
+- Daily update time setting
+- Date validation for reservations within rolling window
+- Dynamic date input restrictions on reservation form

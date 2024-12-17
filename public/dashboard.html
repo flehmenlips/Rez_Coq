@@ -22,6 +22,25 @@
                 <label for="time_slot_interval">Time Slot Interval (minutes):</label>
                 <input type="number" id="time_slot_interval" name="time_slot_interval" min="15" step="15">
             </div>
+            <div class="setting-group">
+                <label for="rolling_days">Reservation Window:</label>
+                <select id="rolling_days" name="rolling_days">
+                    <option value="30">30 Days</option>
+                    <option value="60">60 Days</option>
+                    <option value="90">90 Days</option>
+                </select>
+            </div>
+            <div class="setting-group">
+                <label for="rolling_update_hour">Daily Update Time:</label>
+                <select id="rolling_update_hour" name="rolling_update_hour">
+                    <option value="00:00">12:00 AM</option>
+                    <option value="01:00">1:00 AM</option>
+                    <option value="02:00">2:00 AM</option>
+                    <option value="03:00">3:00 AM</option>
+                    <option value="04:00">4:00 AM</option>
+                    <option value="05:00">5:00 AM</option>
+                </select>
+            </div>
             <button type="submit">Save Settings</button>
         </form>
         

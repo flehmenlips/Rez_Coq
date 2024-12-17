@@ -1,3 +1,29 @@
+// Add this at the start of your script
+async function updateDateInput() {
+    try {
+        // Fetch rolling days setting
+        const response = await fetch('/api/settings');
+        const settings = await response.json();
+        const rollingDays = parseInt(settings.rolling_days);
+
+        // Set min and max dates
+        const dateInput = document.getElementById('date');
+        const today = new Date();
+        const maxDate = new Date();
+        maxDate.setDate(today.getDate() + rollingDays);
+
+        dateInput.min = today.toISOString().split('T')[0];
+        dateInput.max = maxDate.toISOString().split('T')[0];
+    } catch (error) {
+        console.error('Error updating date restrictions:', error);
+    }
+}
+
+// Add this to your existing DOMContentLoaded event
+document.addEventListener('DOMContentLoaded', () => {
+    updateDateInput();
+});
+
 document.getElementById('reservationForm').addEventListener('submit', async (e) => {
     e.preventDefault();
     const formData = new FormData(e.target);
