@@ -9,6 +9,15 @@ app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(express.static(path.join(__dirname, 'public')));
 
+// Add these routes before your API routes
+app.get('/dashboard', (req, res) => {
+    res.sendFile(path.join(__dirname, 'public', 'dashboard.html'));
+});
+
+app.get('/', (req, res) => {
+    res.sendFile(path.join(__dirname, 'public', 'index.html'));
+});
+
 // Database
 const db = new sqlite3.Database('./db/database.sqlite');
 db.serialize(() => {
@@ -35,8 +44,9 @@ db.serialize(() => {
             ['opening_hours', '09:00-22:00', 'Restaurant operating hours'],
             ['max_party_size', '10', 'Maximum party size allowed'],
             ['time_slot_interval', '30', 'Reservation time slot interval (minutes)'],
-            ['rolling_days', '30', 'Number of days ahead for reservations'],
-            ['rolling_update_hour', '00:00', 'Time when availability rolls forward']
+            ['opening_time', '11:00', 'Restaurant opening time'],
+            ['closing_time', '22:00', 'Restaurant closing time'],
+            ['slot_duration', '30', 'Time slot duration in minutes']
         ];
         
         const stmt = db.prepare('INSERT OR IGNORE INTO settings (key, value, description) VALUES (?, ?, ?)');

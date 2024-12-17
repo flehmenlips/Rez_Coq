@@ -41,6 +41,28 @@
                     <option value="05:00">5:00 AM</option>
                 </select>
             </div>
+            <div class="setting-group">
+                <label for="service_hours">Service Hours</label>
+                <div class="time-range-inputs">
+                    <div>
+                        <label for="opening_time">Opens:</label>
+                        <input type="time" id="opening_time" name="opening_time" value="11:00">
+                    </div>
+                    <div>
+                        <label for="closing_time">Closes:</label>
+                        <input type="time" id="closing_time" name="closing_time" value="22:00">
+                    </div>
+                </div>
+            </div>
+            <div class="setting-group">
+                <label for="slot_duration">Time Slot Duration</label>
+                <select id="slot_duration" name="slot_duration">
+                    <option value="15">15 minutes</option>
+                    <option value="30" selected>30 minutes</option>
+                    <option value="45">45 minutes</option>
+                    <option value="60">1 hour</option>
+                </select>
+            </div>
             <button type="submit">Save Settings</button>
         </form>
         

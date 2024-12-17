@@ -11,8 +11,16 @@
     <form id="reservationForm">
         <label for="date">Date:</label>
         <input type="date" id="date" name="date" required>
-        <label for="time">Time:</label>
-        <input type="time" id="time" name="time" required>
+        <div class="form-group">
+            <label for="selected-time">Time:</label>
+            <button type="button" id="time-picker-button" class="time-picker-button">
+                <span id="selected-time-display">Select a time</span>
+                <svg class="clock-icon" viewBox="0 0 24 24">
+                    <path d="M12,2A10,10 0 0,0 2,12A10,10 0 0,0 12,22A10,10 0 0,0 22,12A10,10 0 0,0 12,2M12,4A8,8 0 0,1 20,12A8,8 0 0,1 12,20A8,8 0 0,1 4,12A8,8 0 0,1 12,4M12,6A6,6 0 0,0 6,12A6,6 0 0,0 12,18A6,6 0 0,0 18,12A6,6 0 0,0 12,6M12,8A4,4 0 0,1 16,12A4,4 0 0,1 12,16A4,4 0 0,1 8,12A4,4 0 0,1 12,8Z"/>
+                </svg>
+            </button>
+            <input type="hidden" id="time" name="time" required>
+        </div>
         <label for="guests">Number of Guests:</label>
         <input type="number" id="guests" name="guests" min="1" required>
         <label for="email">Email:</label>
@@ -21,6 +29,20 @@
         <input type="text" id="name" name="name" required>
         <input type="submit" value="Submit">
     </form>
+
+    <div id="time-slot-modal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>Select a Time</h2>
+                <button class="close-modal">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div class="time-slots" id="timeSlots">
+                    <!-- Time slots will be populated here -->
+                </div>
+            </div>
+        </div>
+    </div>
 
     <script src="script.js"></script>
 </body>

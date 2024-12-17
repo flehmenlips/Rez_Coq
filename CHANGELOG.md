@@ -28,7 +28,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 ### Added
-- Rolling availability window setting (30/60/90 days)
-- Daily update time setting
-- Date validation for reservations within rolling window
-- Dynamic date input restrictions on reservation form
+- Enhanced time slot selector with visual interface
+- Configurable service hours in dashboard
+- Customizable time slot duration
+- Dynamic time slot generation based on settings
+### Changed
+- Replaced basic time input with modern time slot grid
