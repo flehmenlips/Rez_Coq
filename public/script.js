@@ -1,12 +1,17 @@
-// Add this at the start of your script
-async function updateDateInput() {
+document.addEventListener('DOMContentLoaded', async () => {
     try {
-        // Fetch rolling days setting
+        // Load settings
         const response = await fetch('/api/settings');
         const settings = await response.json();
+        console.log('Loaded settings:', settings); // Debug log
+        
+        const operatingDays = settings.operating_days ? JSON.parse(settings.operating_days) : [];
+        console.log('Operating days:', operatingDays); // Debug log
+        
         const rollingDays = parseInt(settings.rolling_days);
+        console.log('Rolling days:', rollingDays); // Debug log
 
-        // Set min and max dates
+        // Set up date constraints
         const dateInput = document.getElementById('date');
         const today = new Date();
         const maxDate = new Date();
@@ -14,171 +19,123 @@ async function updateDateInput() {
 
         dateInput.min = today.toISOString().split('T')[0];
         dateInput.max = maxDate.toISOString().split('T')[0];
+
+        // Handle date selection
+        dateInput.addEventListener('change', async function() {
+            if (!this.value) return;
+            
+            const selectedDate = new Date(this.value);
+            const dayOfWeek = selectedDate.toLocaleString('en-US', { weekday: 'long' });
+            
+            if (!operatingDays.includes(dayOfWeek)) {
+                showError(`We're closed on ${dayOfWeek}s`);
+                this.value = '';
+                return;
+            }
+
+            // Check capacity and update time slots
+            const capacity = await checkDateCapacity(this.value);
+            updateTimeSlotAvailability(capacity.remainingCapacity > 0);
+        });
+
+        // Initialize time picker
+        initializeTimePicker();
+
     } catch (error) {
-        console.error('Error updating date restrictions:', error);
+        console.error('Error loading settings:', error);
+        showError('Error loading settings');
     }
+});
+
+function initializeTimePicker() {
+    const timePickerButton = document.getElementById('time-picker-button');
+    const timeInput = document.getElementById('time');
+
+    timePickerButton.addEventListener('click', function() {
+        if (this.disabled) return;
+
+        const modal = document.createElement('div');
+        modal.className = 'modal';
+        modal.style.display = 'flex';
+        modal.innerHTML = `
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h3>Select Time</h3>
+                    <button class="close-modal">&times;</button>
+                </div>
+                <div class="time-slots">
+                    ${generateTimeSlots()}
+                </div>
+            </div>
+        `;
+
+        document.body.appendChild(modal);
+
+        // Handle time slot selection
+        modal.addEventListener('click', function(e) {
+            if (e.target.classList.contains('time-slot')) {
+                const selectedTime = e.target.dataset.time;
+                timeInput.value = selectedTime;
+                document.getElementById('selected-time-display').textContent = selectedTime;
+                modal.remove();
+            } else if (e.target.classList.contains('close-modal') || e.target === modal) {
+                modal.remove();
+            }
+        });
+    });
 }
 
-// Add this function to check capacity
+function generateTimeSlots() {
+    const slots = [];
+    for (let hour = 11; hour < 22; hour++) {
+        for (let minute of ['00', '30']) {
+            const timeString = `${hour.toString().padStart(2, '0')}:${minute}`;
+            slots.push(`<div class="time-slot" data-time="${timeString}">${timeString}</div>`);
+        }
+    }
+    return slots.join('');
+}
+
 async function checkDateCapacity(date) {
     try {
         const response = await fetch(`/api/capacity/${date}`);
-        const capacity = await response.json();
-        return capacity;
+        if (!response.ok) throw new Error('Failed to check capacity');
+        return await response.json();
     } catch (error) {
         console.error('Error checking capacity:', error);
         throw error;
     }
 }
 
-// Add this to your existing DOMContentLoaded event
-document.addEventListener('DOMContentLoaded', () => {
-    const modal = document.getElementById('time-slot-modal');
-    const timePickerButton = document.getElementById('time-picker-button');
-    const closeModal = document.querySelector('.close-modal');
-    const selectedTimeDisplay = document.getElementById('selected-time-display');
-
-    // Open modal
-    timePickerButton.addEventListener('click', () => {
-        modal.classList.add('show');
-        initializeTimeSlots();
-    });
-
-    // Close modal
-    closeModal.addEventListener('click', () => {
-        modal.classList.remove('show');
-    });
-
-    // Close modal when clicking outside
-    modal.addEventListener('click', (e) => {
-        if (e.target === modal) {
-            modal.classList.remove('show');
-        }
-    });
-
-    async function initializeTimeSlots() {
-        try {
-            const response = await fetch('/api/settings');
-            const settings = await response.json();
-            
-            const slots = generateTimeSlots(
-                settings.opening_time || '11:00',
-                settings.closing_time || '22:00',
-                settings.slot_duration || '30'
-            );
-            
-            const timeSlotsContainer = document.getElementById('timeSlots');
-            timeSlotsContainer.innerHTML = '';
-            
-            slots.forEach(time => {
-                const slot = document.createElement('button');
-                slot.type = 'button';
-                slot.className = 'time-slot';
-                slot.textContent = time;
-                
-                slot.addEventListener('click', () => {
-                    document.querySelectorAll('.time-slot').forEach(s => 
-                        s.classList.remove('selected'));
-                    slot.classList.add('selected');
-                    document.getElementById('time').value = time;
-                    selectedTimeDisplay.textContent = time;
-                    modal.classList.remove('show');
-                });
-                
-                timeSlotsContainer.appendChild(slot);
-            });
-        } catch (error) {
-            console.error('Error loading time slots:', error);
-        }
-    }
-
-    // Initialize date picker and other existing functionality
-    updateDateInput();
-});
-
-document.getElementById('reservationForm').addEventListener('submit', async (e) => {
-    e.preventDefault();
-    const formData = new FormData(e.target);
-    const reservation = Object.fromEntries(formData.entries());
-
-    try {
-        const response = await fetch('/api/reservation', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-            },
-            body: JSON.stringify(reservation)
-        });
-        if (!response.ok) {
-            throw new Error('Network response was not ok');
-        }
-        const result = await response.text();
-        alert(result);
-    } catch (error) {
-        alert('Error making reservation: ' + error.message);
-    }
-});
-
-// Add these functions
-function generateTimeSlots(openTime, closeTime, duration) {
-    const slots = [];
-    const [openHour, openMin] = openTime.split(':').map(Number);
-    const [closeHour, closeMin] = closeTime.split(':').map(Number);
+function showError(message) {
+    const errorDiv = document.getElementById('error-message') || createErrorDiv();
+    errorDiv.textContent = message;
+    errorDiv.style.opacity = '1';
     
-    let currentTime = new Date();
-    currentTime.setHours(openHour, openMin, 0);
-    
-    const endTime = new Date();
-    endTime.setHours(closeHour, closeMin, 0);
-    
-    while (currentTime < endTime) {
-        slots.push(currentTime.toLocaleTimeString('en-US', {
-            hour: 'numeric',
-            minute: '2-digit',
-            hour12: true
-        }));
-        currentTime.setMinutes(currentTime.getMinutes() + parseInt(duration));
-    }
-    
-    return slots;
+    setTimeout(() => {
+        errorDiv.style.opacity = '0';
+    }, 3000);
 }
 
-// Update the date input handler
-document.getElementById('date').addEventListener('change', async (e) => {
-    const date = e.target.value;
-    const guestsInput = document.getElementById('guests');
+function createErrorDiv() {
+    const errorDiv = document.createElement('div');
+    errorDiv.id = 'error-message';
+    errorDiv.className = 'error-message';
+    document.querySelector('#reservationForm').prepend(errorDiv);
+    return errorDiv;
+}
+
+function updateTimeSlotAvailability(isAvailable) {
     const timePickerButton = document.getElementById('time-picker-button');
     const selectedTimeDisplay = document.getElementById('selected-time-display');
     
-    try {
-        const capacity = await checkDateCapacity(date);
-        const requestedGuests = parseInt(guestsInput.value) || 1;
-        
-        if (capacity.remainingCapacity < requestedGuests) {
-            timePickerButton.disabled = true;
-            selectedTimeDisplay.textContent = 'No availability for this date';
-            timePickerButton.classList.add('disabled');
-        } else {
-            timePickerButton.disabled = false;
-            selectedTimeDisplay.textContent = 'Select a time';
-            timePickerButton.classList.remove('disabled');
-            initializeTimeSlots();
-        }
-    } catch (error) {
-        console.error('Error:', error);
+    if (!isAvailable) {
+        timePickerButton.disabled = true;
+        selectedTimeDisplay.textContent = 'No availability for this date';
+        timePickerButton.classList.add('disabled');
+    } else {
+        timePickerButton.disabled = false;
+        selectedTimeDisplay.textContent = 'Select a time';
+        timePickerButton.classList.remove('disabled');
     }
-});
-
-// Update guests input handler
-document.getElementById('guests').addEventListener('change', async (e) => {
-    const date = document.getElementById('date').value;
-    if (date) {
-        const requestedGuests = parseInt(e.target.value) || 1;
-        const capacity = await checkDateCapacity(date);
-        
-        if (capacity.remainingCapacity < requestedGuests) {
-            alert(`Sorry, we only have capacity for ${capacity.remainingCapacity} more guests on this date.`);
-            e.target.value = capacity.remainingCapacity;
-        }
-    }
-});
+}
