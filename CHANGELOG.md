@@ -28,9 +28,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 ### Added
-- Enhanced time slot selector with visual interface
-- Configurable service hours in dashboard
-- Customizable time slot duration
-- Dynamic time slot generation based on settings
+- Daily guest capacity limit setting in dashboard
+- Real-time capacity checking for reservations
+- Dynamic availability updates based on capacity
+- User feedback for capacity limitations
 ### Changed
-- Replaced basic time input with modern time slot grid
+- Reservation form now validates against daily capacity
+- Time slot selector disabled when capacity is reached

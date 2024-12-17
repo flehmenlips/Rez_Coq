@@ -46,7 +46,8 @@ db.serialize(() => {
             ['time_slot_interval', '30', 'Reservation time slot interval (minutes)'],
             ['opening_time', '11:00', 'Restaurant opening time'],
             ['closing_time', '22:00', 'Restaurant closing time'],
-            ['slot_duration', '30', 'Time slot duration in minutes']
+            ['slot_duration', '30', 'Time slot duration in minutes'],
+            ['daily_max_guests', '100', 'Maximum number of guests allowed per day']
         ];
         
         const stmt = db.prepare('INSERT OR IGNORE INTO settings (key, value, description) VALUES (?, ?, ?)');
@@ -72,32 +73,50 @@ function isDateWithinRollingWindow(date, rollingDays) {
 app.post('/api/reservation', async (req, res) => {
     const { date, time, guests, email, name } = req.body;
     
-    // Get current settings
     try {
-        const settings = await new Promise((resolve, reject) => {
-            db.get('SELECT value FROM settings WHERE key = "rolling_days"', (err, row) => {
+        // Get daily maximum from settings
+        const maxGuests = await new Promise((resolve, reject) => {
+            db.get('SELECT value FROM settings WHERE key = "daily_max_guests"', (err, row) => {
                 if (err) reject(err);
-                else resolve(row);
+                else resolve(parseInt(row.value));
             });
         });
-        
-        const rollingDays = parseInt(settings.value);
-        
-        // Validate date is within rolling window
-        if (!isDateWithinRollingWindow(date, rollingDays)) {
-            return res.status(400).send(`Reservations are only accepted up to ${rollingDays} days in advance`);
-        }
-        
-        // Continue with existing reservation logic
-        db.run(`INSERT INTO reservations (date, time, guests, email, name) VALUES (?, ?, ?, ?, ?)`, 
-            [date, time, guests, email, name], function(err) {
-            if (err) {
-                return res.status(500).send('Error saving reservation');
-            }
-            res.send(`Reservation added with ID: ${this.lastID}`);
+
+        // Get current total for the date
+        const currentTotal = await new Promise((resolve, reject) => {
+            db.get('SELECT SUM(guests) as total FROM reservations WHERE date = ?', 
+                [date], (err, row) => {
+                    if (err) reject(err);
+                    else resolve(row.total || 0);
+                });
         });
+
+        // Check if new reservation would exceed capacity
+        if (currentTotal + parseInt(guests) > maxGuests) {
+            return res.status(400).json({
+                error: 'Capacity exceeded',
+                message: 'Sorry, we don\'t have enough capacity for this date'
+            });
+        }
+
+        // If capacity is available, proceed with reservation
+        db.run(`INSERT INTO reservations (date, time, guests, email, name) 
+                VALUES (?, ?, ?, ?, ?)`, 
+            [date, time, guests, email, name], 
+            function(err) {
+                if (err) {
+                    return res.status(500).json({
+                        error: 'Database error',
+                        message: 'Error saving reservation'
+                    });
+                }
+                res.json({
+                    message: 'Reservation confirmed',
+                    id: this.lastID
+                });
+            });
     } catch (error) {
-        res.status(500).send('Error processing reservation');
+        res.status(500).json({ error: error.message });
     }
 });
 
@@ -151,6 +170,38 @@ app.post('/api/settings', (req, res) => {
             console.error('Settings update failed:', err); // Debug log
             res.status(500).json({ error: err.message });
         });
+});
+
+// Add this new endpoint to check daily capacity
+app.get('/api/capacity/:date', async (req, res) => {
+    const date = req.params.date;
+    
+    try {
+        // Get daily maximum from settings
+        const maxGuests = await new Promise((resolve, reject) => {
+            db.get('SELECT value FROM settings WHERE key = "daily_max_guests"', (err, row) => {
+                if (err) reject(err);
+                else resolve(parseInt(row.value));
+            });
+        });
+
+        // Get total guests for the date
+        const totalGuests = await new Promise((resolve, reject) => {
+            db.get('SELECT SUM(guests) as total FROM reservations WHERE date = ?', 
+                [date], (err, row) => {
+                    if (err) reject(err);
+                    else resolve(row.total || 0);
+                });
+        });
+
+        res.json({
+            maxGuests,
+            currentTotal: totalGuests,
+            remainingCapacity: maxGuests - totalGuests
+        });
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
 });
 
 // Start server

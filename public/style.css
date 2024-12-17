@@ -197,3 +197,17 @@ input[type="submit"]:hover {
 .time-slot:hover {
     background-color: #f0f0f0;
 }
+
+.time-picker-button.disabled {
+    background-color: #f5f5f5;
+    cursor: not-allowed;
+    border-color: #ddd;
+    color: #999;
+}
+
+.setting-help {
+    display: block;
+    margin-top: 5px;
+    color: #666;
+    font-size: 0.9em;
+}

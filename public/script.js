@@ -19,6 +19,18 @@ async function updateDateInput() {
     }
 }
 
+// Add this function to check capacity
+async function checkDateCapacity(date) {
+    try {
+        const response = await fetch(`/api/capacity/${date}`);
+        const capacity = await response.json();
+        return capacity;
+    } catch (error) {
+        console.error('Error checking capacity:', error);
+        throw error;
+    }
+}
+
 // Add this to your existing DOMContentLoaded event
 document.addEventListener('DOMContentLoaded', () => {
     const modal = document.getElementById('time-slot-modal');
@@ -130,3 +142,43 @@ function generateTimeSlots(openTime, closeTime, duration) {
     
     return slots;
 }
+
+// Update the date input handler
+document.getElementById('date').addEventListener('change', async (e) => {
+    const date = e.target.value;
+    const guestsInput = document.getElementById('guests');
+    const timePickerButton = document.getElementById('time-picker-button');
+    const selectedTimeDisplay = document.getElementById('selected-time-display');
+    
+    try {
+        const capacity = await checkDateCapacity(date);
+        const requestedGuests = parseInt(guestsInput.value) || 1;
+        
+        if (capacity.remainingCapacity < requestedGuests) {
+            timePickerButton.disabled = true;
+            selectedTimeDisplay.textContent = 'No availability for this date';
+            timePickerButton.classList.add('disabled');
+        } else {
+            timePickerButton.disabled = false;
+            selectedTimeDisplay.textContent = 'Select a time';
+            timePickerButton.classList.remove('disabled');
+            initializeTimeSlots();
+        }
+    } catch (error) {
+        console.error('Error:', error);
+    }
+});
+
+// Update guests input handler
+document.getElementById('guests').addEventListener('change', async (e) => {
+    const date = document.getElementById('date').value;
+    if (date) {
+        const requestedGuests = parseInt(e.target.value) || 1;
+        const capacity = await checkDateCapacity(date);
+        
+        if (capacity.remainingCapacity < requestedGuests) {
+            alert(`Sorry, we only have capacity for ${capacity.remainingCapacity} more guests on this date.`);
+            e.target.value = capacity.remainingCapacity;
+        }
+    }
+});
