@@ -1,147 +1,172 @@
-// Add this at the start of your script
-async function updateDateInput() {
-    try {
-        // Fetch rolling days setting
-        const response = await fetch('/api/settings');
-        const settings = await response.json();
-        const rollingDays = parseInt(settings.rolling_days);
+// Initialize time slots function
+function initializeTimeSlots() {
+    console.log('Initializing time slots...');
+    
+    // Get settings from the server
+    const settings = {
+        opening_time: '11:00',  // Default opening time
+        closing_time: '22:00',  // Default closing time
+        slot_duration: 30       // Default slot duration in minutes
+    };
 
-        // Set min and max dates
-        const dateInput = document.getElementById('date');
-        const today = new Date();
-        const maxDate = new Date();
-        maxDate.setDate(today.getDate() + rollingDays);
-
-        dateInput.min = today.toISOString().split('T')[0];
-        dateInput.max = maxDate.toISOString().split('T')[0];
-    } catch (error) {
-        console.error('Error updating date restrictions:', error);
-    }
+    const slots = generateTimeSlots(settings.opening_time, settings.closing_time, settings.slot_duration);
+    console.log('Generated time slots:', slots);
+    
+    // Create HTML for time slots
+    const slotsHtml = slots.map(time => `
+        <div class="time-slot" data-time="${time}">
+            ${time}
+        </div>
+    `).join('');
+    
+    console.log('Generated HTML:', slotsHtml);
+    return slotsHtml;
 }
 
-// Add this function to check capacity
+// Generate time slots helper function
+function generateTimeSlots(startTime, endTime, intervalMinutes) {
+    const slots = [];
+    let [startHour, startMinute] = startTime.split(':').map(Number);
+    let [endHour, endMinute] = endTime.split(':').map(Number);
+    
+    let current = new Date();
+    current.setHours(startHour, startMinute, 0);
+    
+    let end = new Date();
+    end.setHours(endHour, endMinute, 0);
+    
+    while (current <= end) {
+        slots.push(current.toLocaleTimeString('en-US', {
+            hour: 'numeric',
+            minute: '2-digit',
+            hour12: true
+        }));
+        current.setMinutes(current.getMinutes() + intervalMinutes);
+    }
+    
+    return slots;
+}
+
+// Check date capacity
 async function checkDateCapacity(date) {
     try {
         const response = await fetch(`/api/capacity/${date}`);
-        const capacity = await response.json();
-        return capacity;
+        if (!response.ok) throw new Error('Failed to check capacity');
+        return await response.json();
     } catch (error) {
         console.error('Error checking capacity:', error);
         throw error;
     }
 }
 
-// Add this to your existing DOMContentLoaded event
-document.addEventListener('DOMContentLoaded', () => {
-    const modal = document.getElementById('time-slot-modal');
-    const timePickerButton = document.getElementById('time-picker-button');
-    const closeModal = document.querySelector('.close-modal');
-    const selectedTimeDisplay = document.getElementById('selected-time-display');
+// Document ready handler
+document.addEventListener('DOMContentLoaded', async () => {
+    try {
+        // Load settings
+        const response = await fetch('/api/settings');
+        const settings = await response.json();
+        
+        // Initialize date picker
+        const dateInput = document.getElementById('date');
+        if (dateInput) {
+            const today = new Date();
+            const maxDate = new Date();
+            maxDate.setDate(today.getDate() + (settings.rolling_days || 30));
 
-    // Open modal
-    timePickerButton.addEventListener('click', () => {
-        modal.classList.add('show');
-        initializeTimeSlots();
-    });
-
-    // Close modal
-    closeModal.addEventListener('click', () => {
-        modal.classList.remove('show');
-    });
-
-    // Close modal when clicking outside
-    modal.addEventListener('click', (e) => {
-        if (e.target === modal) {
-            modal.classList.remove('show');
+            dateInput.min = today.toISOString().split('T')[0];
+            dateInput.max = maxDate.toISOString().split('T')[0];
         }
-    });
 
-    async function initializeTimeSlots() {
-        try {
-            const response = await fetch('/api/settings');
-            const settings = await response.json();
-            
-            const slots = generateTimeSlots(
-                settings.opening_time || '11:00',
-                settings.closing_time || '22:00',
-                settings.slot_duration || '30'
-            );
-            
-            const timeSlotsContainer = document.getElementById('timeSlots');
-            timeSlotsContainer.innerHTML = '';
-            
-            slots.forEach(time => {
-                const slot = document.createElement('button');
-                slot.type = 'button';
-                slot.className = 'time-slot';
-                slot.textContent = time;
+        // Initialize time picker button
+        const timePickerButton = document.getElementById('time-picker-button');
+        if (timePickerButton) {
+            timePickerButton.addEventListener('click', function() {
+                console.log('Time picker clicked');
                 
-                slot.addEventListener('click', () => {
-                    document.querySelectorAll('.time-slot').forEach(s => 
-                        s.classList.remove('selected'));
-                    slot.classList.add('selected');
-                    document.getElementById('time').value = time;
-                    selectedTimeDisplay.textContent = time;
-                    modal.classList.remove('show');
+                // Create and append modal
+                const modal = document.createElement('div');
+                modal.className = 'modal show'; // Add show class immediately
+                modal.innerHTML = `
+                    <div class="modal-content">
+                        <div class="modal-header">
+                            <h3>Select Time</h3>
+                            <button type="button" class="close-modal">&times;</button>
+                        </div>
+                        <div id="time-slots-container" class="time-slots">
+                            <!-- Time slots will be inserted here -->
+                        </div>
+                    </div>
+                `;
+                
+                document.body.appendChild(modal);
+                
+                // Generate and insert time slots
+                const timeSlotsContainer = modal.querySelector('#time-slots-container');
+                const timeSlots = generateTimeSlots('11:00', '22:00', 30);
+                timeSlots.forEach(time => {
+                    const slot = document.createElement('div');
+                    slot.className = 'time-slot';
+                    slot.textContent = time;
+                    slot.addEventListener('click', () => {
+                        document.getElementById('time').value = time;
+                        document.getElementById('selected-time-display').textContent = time;
+                        modal.remove();
+                    });
+                    timeSlotsContainer.appendChild(slot);
                 });
                 
-                timeSlotsContainer.appendChild(slot);
+                // Add close button handler
+                modal.querySelector('.close-modal').addEventListener('click', () => {
+                    modal.remove();
+                });
+                
+                // Close on outside click
+                modal.addEventListener('click', (e) => {
+                    if (e.target === modal) {
+                        modal.remove();
+                    }
+                });
             });
-        } catch (error) {
-            console.error('Error loading time slots:', error);
         }
-    }
 
-    // Initialize date picker and other existing functionality
-    updateDateInput();
+    } catch (error) {
+        console.error('Error initializing form:', error);
+    }
 });
 
 document.getElementById('reservationForm').addEventListener('submit', async (e) => {
     e.preventDefault();
     const formData = new FormData(e.target);
-    const reservation = Object.fromEntries(formData.entries());
+    const reservation = {
+        partySize: parseInt(formData.get('guests')),
+        date: formData.get('date'),
+        time: formData.get('time'),
+        name: formData.get('name'),
+        email: formData.get('email')
+    };
 
     try {
-        const response = await fetch('/api/reservation', {
+        const response = await fetch('/api/reservations', {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
             },
             body: JSON.stringify(reservation)
         });
+        
         if (!response.ok) {
-            throw new Error('Network response was not ok');
+            throw new Error('Failed to create reservation');
         }
-        const result = await response.text();
-        alert(result);
+        
+        const result = await response.json();
+        alert('Reservation created successfully!');
+        e.target.reset(); // Reset form
+        
     } catch (error) {
+        console.error('Error making reservation:', error);
         alert('Error making reservation: ' + error.message);
     }
 });
-
-// Add these functions
-function generateTimeSlots(openTime, closeTime, duration) {
-    const slots = [];
-    const [openHour, openMin] = openTime.split(':').map(Number);
-    const [closeHour, closeMin] = closeTime.split(':').map(Number);
-    
-    let currentTime = new Date();
-    currentTime.setHours(openHour, openMin, 0);
-    
-    const endTime = new Date();
-    endTime.setHours(closeHour, closeMin, 0);
-    
-    while (currentTime < endTime) {
-        slots.push(currentTime.toLocaleTimeString('en-US', {
-            hour: 'numeric',
-            minute: '2-digit',
-            hour12: true
-        }));
-        currentTime.setMinutes(currentTime.getMinutes() + parseInt(duration));
-    }
-    
-    return slots;
-}
 
 // Update the date input handler
 document.getElementById('date').addEventListener('change', async (e) => {
@@ -162,7 +187,6 @@ document.getElementById('date').addEventListener('change', async (e) => {
             timePickerButton.disabled = false;
             selectedTimeDisplay.textContent = 'Select a time';
             timePickerButton.classList.remove('disabled');
-            initializeTimeSlots();
         }
     } catch (error) {
         console.error('Error:', error);

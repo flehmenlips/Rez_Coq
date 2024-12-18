@@ -4,77 +4,66 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Restaurant Dashboard</title>
-    <link rel="stylesheet" href="dashboard.css">
+    <link rel="stylesheet" href="/dashboard.css">
+    <script src="/dashboard.js" defer></script>
 </head>
 <body>
     <div class="dashboard-container">
         <h1>Restaurant Settings Dashboard</h1>
-        <form id="settingsForm">
-            <div class="setting-group">
-                <label for="opening_hours">Operating Hours:</label>
-                <input type="text" id="opening_hours" name="opening_hours" placeholder="09:00-22:00">
-            </div>
-            <div class="setting-group">
-                <label for="max_party_size">Maximum Party Size:</label>
-                <input type="number" id="max_party_size" name="max_party_size" min="1">
-            </div>
-            <div class="setting-group">
-                <label for="time_slot_interval">Time Slot Interval (minutes):</label>
-                <input type="number" id="time_slot_interval" name="time_slot_interval" min="15" step="15">
-            </div>
-            <div class="setting-group">
-                <label for="rolling_days">Reservation Window:</label>
-                <select id="rolling_days" name="rolling_days">
-                    <option value="30">30 Days</option>
-                    <option value="60">60 Days</option>
-                    <option value="90">90 Days</option>
-                </select>
-            </div>
-            <div class="setting-group">
-                <label for="rolling_update_hour">Daily Update Time:</label>
-                <select id="rolling_update_hour" name="rolling_update_hour">
-                    <option value="00:00">12:00 AM</option>
-                    <option value="01:00">1:00 AM</option>
-                    <option value="02:00">2:00 AM</option>
-                    <option value="03:00">3:00 AM</option>
-                    <option value="04:00">4:00 AM</option>
-                    <option value="05:00">5:00 AM</option>
-                </select>
-            </div>
-            <div class="setting-group">
-                <label for="service_hours">Service Hours</label>
-                <div class="time-range-inputs">
-                    <div>
-                        <label for="opening_time">Opens:</label>
-                        <input type="time" id="opening_time" name="opening_time" value="11:00">
-                    </div>
-                    <div>
-                        <label for="closing_time">Closes:</label>
-                        <input type="time" id="closing_time" name="closing_time" value="22:00">
+        <div class="settings-section">
+            <h2>Restaurant Settings</h2>
+            <form id="settingsForm">
+                <div class="form-group">
+                    <label>Operating Days</label>
+                    <div class="checkbox-group">
+                        <label><input type="checkbox" name="operating_days" value="Monday"> Monday</label>
+                        <label><input type="checkbox" name="operating_days" value="Tuesday"> Tuesday</label>
+                        <label><input type="checkbox" name="operating_days" value="Wednesday"> Wednesday</label>
+                        <label><input type="checkbox" name="operating_days" value="Thursday"> Thursday</label>
+                        <label><input type="checkbox" name="operating_days" value="Friday"> Friday</label>
+                        <label><input type="checkbox" name="operating_days" value="Saturday"> Saturday</label>
+                        <label><input type="checkbox" name="operating_days" value="Sunday"> Sunday</label>
                     </div>
                 </div>
-            </div>
-            <div class="setting-group">
-                <label for="slot_duration">Time Slot Duration</label>
-                <select id="slot_duration" name="slot_duration">
-                    <option value="15">15 minutes</option>
-                    <option value="30" selected>30 minutes</option>
-                    <option value="45">45 minutes</option>
-                    <option value="60">1 hour</option>
-                </select>
-            </div>
-            <div class="setting-group">
-                <label for="daily_max_guests">Maximum Guests Per Day:</label>
-                <input type="number" 
-                       id="daily_max_guests" 
-                       name="daily_max_guests" 
-                       min="1" 
-                       value="100"
-                       required>
-                <small class="setting-help">Set the maximum number of total guests allowed per day</small>
-            </div>
-            <button type="submit">Save Settings</button>
-        </form>
+                
+                <div class="form-group">
+                    <label>Opening Time</label>
+                    <input type="time" name="opening_time" required>
+                </div>
+                
+                <div class="form-group">
+                    <label>Closing Time</label>
+                    <input type="time" name="closing_time" required>
+                </div>
+                
+                <div class="form-group">
+                    <label>Time Slot Duration (minutes)</label>
+                    <input type="number" name="slot_duration" min="15" max="120" step="15" required>
+                </div>
+                
+                <div class="form-group">
+                    <label>Daily Maximum Guests</label>
+                    <input type="number" name="daily_max_guests" min="1" required>
+                </div>
+                
+                <div class="form-group">
+                    <label>Advance Booking Days</label>
+                    <input type="number" name="rolling_days" min="1" max="365" required>
+                </div>
+                
+                <div class="form-group">
+                    <label>Minimum Party Size</label>
+                    <input type="number" name="min_party_size" min="1" required>
+                </div>
+                
+                <div class="form-group">
+                    <label>Maximum Party Size</label>
+                    <input type="number" name="max_party_size" min="1" required>
+                </div>
+                
+                <button type="submit">Save Settings</button>
+            </form>
+        </div>
         
         <h2>Reservations</h2>
         <div id="reservationsTable">
@@ -94,6 +83,5 @@
             </table>
         </div>
     </div>
-    <script src="dashboard.js"></script>
 </body>
 </html> 
