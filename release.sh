@@ -69,4 +69,4 @@ npm run build
 
 echo "Release v$VERSION completed successfully!"
 echo "Native app package is available in the dist/ directory"
-echo "Don't forget to update CHANGELOG.md if needed." 
+echo "Don't forget to update CHANGELOG.md if needed."
