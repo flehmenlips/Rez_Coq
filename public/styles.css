@@ -1,0 +1,25 @@
+.reservation-details {
+    background-color: #f8f9fa;
+    padding: 20px;
+    border-radius: 8px;
+    margin-top: 15px;
+}
+
+.reservation-details p {
+    margin-bottom: 10px;
+    line-height: 1.5;
+}
+
+.modal-header {
+    background-color: #f8f9fa;
+    border-bottom: 1px solid #dee2e6;
+}
+
+.modal-footer {
+    background-color: #f8f9fa;
+    border-top: 1px solid #dee2e6;
+}
+
+.alert {
+    margin-bottom: 0;
+} 

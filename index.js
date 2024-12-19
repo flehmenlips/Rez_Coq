@@ -1,8 +1,70 @@
 const express = require('express');
-const sqlite3 = require('sqlite3').verbose();
+const sqlite3 = require('sqlite3');
 const path = require('path');
+const fs = require('fs');
 const app = express();
 const PORT = process.env.PORT || 3000;
+
+// Create database directory in user's home directory
+const userDataPath = app.isPackaged 
+    ? path.join(process.env.HOME, '.rez_coq', 'db')
+    : path.join(__dirname, 'db');
+
+// Ensure directory exists
+if (!fs.existsSync(userDataPath)) {
+    fs.mkdirSync(userDataPath, { recursive: true });
+}
+
+const dbPath = path.join(userDataPath, 'database.sqlite');
+
+// Database
+const db = new sqlite3.Database(dbPath, (err) => {
+    if (err) {
+        console.error('Database opening error: ', err);
+    } else {
+        console.log('Connected to SQLite database');
+        
+        // Drop and recreate the reservations table
+        db.exec(`
+            DROP TABLE IF EXISTS reservations;
+            
+            CREATE TABLE reservations (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                date TEXT,
+                time TEXT,
+                guests INTEGER,
+                email TEXT,
+                name TEXT,
+                created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+            );
+        `);
+
+        // Create settings table if it doesn't exist
+        db.exec(`
+            CREATE TABLE IF NOT EXISTS settings (
+                key TEXT PRIMARY KEY,
+                value TEXT,
+                description TEXT
+            )
+        `);
+
+        // Insert default settings if they don't exist
+        const defaultSettings = [
+            ['opening_hours', '09:00-22:00', 'Restaurant operating hours'],
+            ['max_party_size', '10', 'Maximum party size allowed'],
+            ['time_slot_interval', '30', 'Reservation time slot interval (minutes)'],
+            ['opening_time', '11:00', 'Restaurant opening time'],
+            ['closing_time', '22:00', 'Restaurant closing time'],
+            ['slot_duration', '30', 'Time slot duration in minutes'],
+            ['daily_max_guests', '100', 'Maximum number of guests allowed per day']
+        ];
+
+        const insertStmt = db.prepare('INSERT OR IGNORE INTO settings (key, value, description) VALUES (?, ?, ?)')
+        defaultSettings.forEach(setting => {
+            insertStmt.run(setting)
+        });
+    }
+});
 
 // Middleware
 app.use(express.json());
@@ -16,48 +78,6 @@ app.get('/dashboard', (req, res) => {
 
 app.get('/', (req, res) => {
     res.sendFile(path.join(__dirname, 'public', 'index.html'));
-});
-
-// Database
-const db = new sqlite3.Database('./db/database.sqlite');
-db.serialize(() => {
-    db.run('CREATE TABLE IF NOT EXISTS reservations (id INTEGER PRIMARY KEY AUTOINCREMENT, date TEXT, time TEXT, guests INTEGER, email TEXT, name TEXT)');
-});
-
-// Add settings table initialization
-db.serialize(() => {
-    // First create the table
-    db.run(`
-        CREATE TABLE IF NOT EXISTS settings (
-            key TEXT PRIMARY KEY,
-            value TEXT,
-            description TEXT
-        )
-    `, (err) => {
-        if (err) {
-            console.error('Error creating settings table:', err);
-            return;
-        }
-        
-        // Then insert default settings
-        const defaultSettings = [
-            ['opening_hours', '09:00-22:00', 'Restaurant operating hours'],
-            ['max_party_size', '10', 'Maximum party size allowed'],
-            ['time_slot_interval', '30', 'Reservation time slot interval (minutes)'],
-            ['opening_time', '11:00', 'Restaurant opening time'],
-            ['closing_time', '22:00', 'Restaurant closing time'],
-            ['slot_duration', '30', 'Time slot duration in minutes'],
-            ['daily_max_guests', '100', 'Maximum number of guests allowed per day']
-        ];
-        
-        const stmt = db.prepare('INSERT OR IGNORE INTO settings (key, value, description) VALUES (?, ?, ?)');
-        defaultSettings.forEach(setting => {
-            stmt.run(setting, (err) => {
-                if (err) console.error('Error inserting setting:', err);
-            });
-        });
-        stmt.finalize();
-    });
 });
 
 // Add this function before your routes
@@ -131,14 +151,14 @@ app.get('/api/reservations', (req, res) => {
 
 // GET settings
 app.get('/api/settings', (req, res) => {
-    db.all('SELECT key, value FROM settings', [], (err, rows) => {
+    db.all('SELECT * FROM settings', [], (err, rows) => {
         if (err) {
+            console.error('Error fetching settings:', err);
             res.status(500).json({ error: err.message });
             return;
         }
-        const settings = {};
-        rows.forEach(row => settings[row.key] = row.value);
-        res.json(settings);
+        console.log('Settings:', rows); // Debug log
+        res.json(rows);
     });
 });
 
@@ -204,5 +224,109 @@ app.get('/api/capacity/:date', async (req, res) => {
     }
 });
 
-// Start server
-app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
+// Add this after your other routes
+app.get('/api/available-times', (req, res) => {
+    const date = req.query.date;
+    console.log('Fetching times for date:', date); // Debug log
+    
+    // Get settings from database
+    db.get('SELECT value FROM settings WHERE key = ?', ['opening_time'], (err, openRow) => {
+        if (err) {
+            console.error('Error fetching opening time:', err);
+            return res.status(500).json({ error: err.message });
+        }
+        console.log('Opening time:', openRow); // Debug log
+        
+        db.get('SELECT value FROM settings WHERE key = ?', ['closing_time'], (err, closeRow) => {
+            if (err) {
+                console.error('Error fetching closing time:', err);
+                return res.status(500).json({ error: err.message });
+            }
+            
+            db.get('SELECT value FROM settings WHERE key = ?', ['slot_duration'], (err, durationRow) => {
+                if (err) {
+                    console.error('Error fetching slot duration:', err);
+                    return res.status(500).json({ error: err.message });
+                }
+
+                const openTime = openRow ? openRow.value : '11:00';
+                const closeTime = closeRow ? closeRow.value : '22:00';
+                const duration = durationRow ? parseInt(durationRow.value) : 30;
+
+                // Generate time slots
+                const slots = [];
+                let currentTime = new Date(`2000-01-01 ${openTime}`);
+                const endTime = new Date(`2000-01-01 ${closeTime}`);
+
+                while (currentTime < endTime) {
+                    slots.push(currentTime.toLocaleTimeString('en-US', { 
+                        hour: '2-digit', 
+                        minute: '2-digit', 
+                        hour12: true 
+                    }));
+                    currentTime.setMinutes(currentTime.getMinutes() + duration);
+                }
+
+                res.json(slots);
+            });
+        });
+    });
+});
+
+// Add reservation endpoint
+app.post('/api/reservations', (req, res) => {
+    console.log('Received reservation:', req.body);
+    
+    const { date, time, guests, email, name } = req.body;
+    
+    // Prevent double submission by checking for existing reservation
+    const checkStmt = db.prepare(`
+        SELECT id FROM reservations 
+        WHERE date = ? AND time = ? AND email = ? 
+        AND created_at > datetime('now', '-1 minute')
+    `);
+    
+    const existing = checkStmt.get([date, time, email]);
+    if (existing) {
+        return res.status(400).json({
+            success: false,
+            message: 'This reservation was just submitted. Please wait a moment before trying again.'
+        });
+    }
+    
+    // Add created_at timestamp to the reservation
+    const stmt = db.prepare(`
+        INSERT INTO reservations (date, time, guests, email, name, created_at)
+        VALUES (?, ?, ?, ?, ?, datetime('now'))
+    `);
+    
+    try {
+        const info = stmt.run([date, time, guests, email, name]);
+        res.json({
+            success: true,
+            message: 'Reservation confirmed',
+            id: info.lastInsertRowid
+        });
+    } catch (err) {
+        console.error('Error saving reservation:', err);
+        res.status(500).json({
+            success: false,
+            message: 'Error saving reservation'
+        });
+    }
+});
+
+// Modified server start with error handling
+const server = app.listen(PORT, () => {
+    console.log(`Server is running on port ${PORT}`)
+}).on('error', (err) => {
+    if (err.code === 'EADDRINUSE') {
+        console.log(`Port ${PORT} is busy, trying ${PORT + 1}`)
+        server.close()
+        app.listen(PORT + 1)
+    } else {
+        console.error('Server error:', err)
+    }
+})
+
+module.exports = app
