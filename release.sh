@@ -6,7 +6,7 @@
 # Check if version is provided
 if [ $# -lt 1 ]; then
     echo "Usage: ./release.sh <version>"
-    echo "Example: ./release.sh 0.0.5"
+    echo "Example: ./release.sh 1.1.0"
     exit 1
 fi
 
@@ -30,31 +30,43 @@ fi
 
 echo -e "\nStarting release process for v$VERSION..."
 
-# Execute release steps
-echo "1. Adding all changes..."
-git add .
+# Update version in package.json
+echo "1. Updating package.json version..."
+npm version $VERSION --no-git-tag-version
 
-echo "2. Committing changes..."
+# Execute release steps (before build)
+echo "2. Adding changes (excluding dist)..."
+git add . ':!dist'
+
+echo "3. Committing changes..."
 git commit -m "$COMMIT_MESSAGE"
 
-echo "3. Merging to develop..."
-git checkout develop || exit 1
-git merge --no-ff feature/* -m "Merge feature branch into develop" || exit 1
+# Only try to merge if feature branches exist
+if git branch | grep -q "feature/"; then
+    echo "4. Merging feature branches to develop..."
+    git checkout develop || exit 1
+    git merge --no-ff feature/* -m "Merge feature branch into develop" || exit 1
+else
+    echo "4. No feature branches to merge..."
+fi
 
-echo "4. Merging to main..."
+echo "5. Merging to main..."
 git checkout main || exit 1
 git merge --no-ff develop -m "Merge develop into main for v$VERSION" || exit 1
 
-echo "5. Creating version tag..."
+echo "6. Creating version tag..."
 git tag -a "v$VERSION" -m "$COMMIT_MESSAGE"
 
-echo "6. Pushing changes..."
+echo "7. Pushing changes..."
 git push origin main
 git push origin develop
 git push origin --tags
 
-echo "7. Cleaning up..."
-git branch -D $(git branch | grep 'feature/' | tr -d ' ') 2>/dev/null || true
+# Build the Electron app (after git operations)
+echo "8. Building Electron app..."
+rm -rf dist/
+npm run build
 
 echo "Release v$VERSION completed successfully!"
+echo "Native app package is available in the dist/ directory"
 echo "Don't forget to update CHANGELOG.md if needed." 

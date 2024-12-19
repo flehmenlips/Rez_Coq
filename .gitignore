@@ -3,3 +3,5 @@ db/
 .DS_Store
 *.log
 .env 
+# Build output
+dist/
