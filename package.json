@@ -1,6 +1,6 @@
 {
   "name": "rez_coq",
-  "version": "1.1.4",
+  "version": "1.1.5",
   "description": "Restaurant Reservation System for Le Coq d'Or",
   "author": "George Page",
   "license": "MIT",
@@ -15,7 +15,7 @@
     "productName": "Rez Coq",
     "mac": {
       "target": "dmg",
-      "icon": null
+      "icon": "build/icons/icon.png"
     }
   },
   "devDependencies": {
