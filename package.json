@@ -1,39 +1,20 @@
 {
   "name": "rez_coq",
-  "version": "1.1.0",
+  "version": "1.1.1",
+  "description": "Restaurant Reservation System for Le Coq d'Or",
+  "author": "George Page",
+  "license": "MIT",
   "main": "main.js",
-  "type": "commonjs",
   "scripts": {
     "start": "electron .",
     "build": "electron-builder",
-    "serve": "node index.js",
     "dev": "nodemon --watch '*.js' --watch 'public/*.html' --watch 'public/*.css' index.js"
   },
-  "keywords": [],
-  "author": "",
-  "license": "ISC",
-  "description": "",
-  "dependencies": {
-    "express": "4.18.2",
-    "sqlite3": "5.1.6"
-  },
-  "devDependencies": {
-    "electron": "25.9.8",
-    "electron-builder": "24.9.1",
-    "nodemon": "^3.1.9"
-  },
   "build": {
-    "appId": "com.yourcompany.rezcoq",
+    "appId": "com.rezcoq.app",
     "productName": "Rez Coq",
     "mac": {
-      "category": "public.app-category.business",
-      "icon": "build/icon.icns",
-      "target": [
-        "dmg"
-      ]
-    },
-    "files": [
-      "**/*"
-    ]
+      "target": "dmg"
+    }
   }
 }
