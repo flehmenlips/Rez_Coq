@@ -1,9 +1,19 @@
 const { app, BrowserWindow } = require('electron')
 const path = require('path')
+const fs = require('fs')
+const os = require('os')
 
 // Set production environment when app is packaged
 if (app.isPackaged) {
     process.env.NODE_ENV = 'production';
+    
+    // Ensure logs directory exists
+    const logDir = path.join(os.homedir(), '.rez_coq', 'logs');
+    try {
+        fs.mkdirSync(logDir, { recursive: true, mode: 0o700 });
+    } catch (e) {
+        console.error('Error creating logs directory:', e);
+    }
 }
 
 const server = require('./index.js')

@@ -12,25 +12,44 @@ const log = {
         if (process.env.NODE_ENV !== 'production') {
             console.log(...args);
         }
+        // Also log to file in production
+        if (process.env.NODE_ENV === 'production') {
+            const logDir = path.join(os.homedir(), '.rez_coq', 'logs');
+            try {
+                fs.mkdirSync(logDir, { recursive: true, mode: 0o700 });
+                fs.appendFileSync(
+                    path.join(logDir, 'app.log'), // Changed from error.log
+                    `${new Date().toISOString()} [INFO]: ${args.join(' ')}\n`
+                );
+            } catch (e) {
+                // If we can't write logs, log to console as fallback
+                console.log('Logging error:', e);
+            }
+        }
     },
     error: (...args) => {
-        // For errors, write to a file in production
+        // For errors, always write to file in production
         if (process.env.NODE_ENV === 'production') {
             const logDir = path.join(os.homedir(), '.rez_coq', 'logs');
             try {
                 fs.mkdirSync(logDir, { recursive: true, mode: 0o700 });
                 fs.appendFileSync(
                     path.join(logDir, 'error.log'),
-                    `${new Date().toISOString()}: ${args.join(' ')}\n`
+                    `${new Date().toISOString()} [ERROR]: ${args.join(' ')}\n`
                 );
             } catch (e) {
-                // Silently fail if we can't write logs
+                console.error('Logging error:', e);
             }
         } else {
             console.error(...args);
         }
     }
 };
+
+// Add startup logging
+log.info('Application starting...');
+log.info('Node environment:', process.env.NODE_ENV);
+log.info('App packaged:', app.isPackaged ? 'yes' : 'no');
 
 // Database setup
 const isProduction = app.isPackaged || process.env.NODE_ENV === 'production';
