@@ -2,38 +2,81 @@ document.addEventListener('DOMContentLoaded', async () => {
     // Load current settings
     try {
         const response = await fetch('/api/settings');
-        const settings = await response.json();
+        const settingsRows = await response.json();
         
+        // Convert array of rows to settings object
+        const settings = settingsRows.reduce((acc, row) => {
+            acc[row.key] = row.value;
+            return acc;
+        }, {});
+        
+        // Update each form field with saved values
         Object.entries(settings).forEach(([key, value]) => {
             const input = document.getElementById(key);
-            if (input) input.value = value;
+            if (input) {
+                if (input.type === 'time') {
+                    // Ensure time values are properly formatted (HH:mm)
+                    input.value = value.padStart(5, '0');
+                } else if (input.type === 'number') {
+                    input.value = parseInt(value);
+                } else {
+                    input.value = value;
+                }
+            }
         });
+        
+        // Load reservations after settings are loaded
+        await loadReservations();
     } catch (error) {
         console.error('Error loading settings:', error);
+        showErrorModal('Failed to load settings. Please refresh the page.');
     }
 
-    // Load reservations
-    loadReservations();
+    await checkSession();
 });
 
 document.getElementById('settingsForm').addEventListener('submit', async (e) => {
     e.preventDefault();
-    const formData = new FormData(e.target);
-    const settings = Object.fromEntries(formData.entries());
+    const form = e.target;
+    const submitButton = form.querySelector('button[type="submit"]');
+    submitButton.disabled = true;
+    submitButton.innerHTML = '<span class="spinner"></span> Saving...';
 
     try {
+        // Collect all form values
+        const settings = {
+            opening_time: form.opening_time.value,
+            closing_time: form.closing_time.value,
+            max_party_size: form.max_party_size.value,
+            daily_max_guests: form.daily_max_guests.value,
+            slot_duration: form.slot_duration.value
+        };
+
+        // Validate settings
+        if (new Date(`2000-01-01 ${settings.closing_time}`) <= 
+            new Date(`2000-01-01 ${settings.opening_time}`)) {
+            throw new Error('Closing time must be after opening time');
+        }
+
         const response = await fetch('/api/settings', {
             method: 'POST',
             headers: {
-                'Content-Type': 'application/json',
+                'Content-Type': 'application/json'
             },
             body: JSON.stringify(settings)
         });
-        
-        if (!response.ok) throw new Error('Failed to save settings');
-        alert('Settings saved successfully!');
+
+        if (!response.ok) {
+            throw new Error('Failed to save settings');
+        }
+
+        showSuccessMessage('Settings saved successfully');
     } catch (error) {
-        alert('Error saving settings: ' + error.message);
+        console.error('Error saving settings:', error);
+        showErrorMessage(error.message || 'Failed to save settings');
+    } finally {
+        submitButton.disabled = false;
+        submitButton.textContent = 'Save Settings';
     }
 });
 
@@ -104,5 +147,67 @@ async function retryEmail(reservationId) {
         }
     } catch (error) {
         alert('Error retrying email: ' + error.message);
+    }
+} 
+
+function showSuccessMessage(message) {
+    const alert = document.createElement('div');
+    alert.className = 'alert alert-success';
+    alert.role = 'alert';
+    alert.textContent = message;
+    
+    insertAlert(alert);
+}
+
+function showErrorMessage(message) {
+    const alert = document.createElement('div');
+    alert.className = 'alert alert-danger';
+    alert.role = 'alert';
+    alert.textContent = message;
+    
+    insertAlert(alert);
+}
+
+function insertAlert(alert) {
+    const container = document.querySelector('.dashboard-container');
+    const form = document.getElementById('settingsForm');
+    container.insertBefore(alert, form);
+    
+    // Remove after 3 seconds
+    setTimeout(() => alert.remove(), 3000);
+} 
+
+// Add logout handler
+document.getElementById('logoutButton').addEventListener('click', async () => {
+    try {
+        const response = await fetch('/api/auth/logout', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' }
+        });
+        
+        const result = await response.json();
+        if (result.success) {
+            window.location.href = '/login';
+        } else {
+            showErrorMessage('Logout failed');
+        }
+    } catch (error) {
+        console.error('Logout error:', error);
+        showErrorMessage('Error during logout');
+    }
+});
+
+// Add session check on page load
+async function checkSession() {
+    try {
+        const response = await fetch('/api/auth/check-session');
+        const result = await response.json();
+        
+        if (!result.authenticated) {
+            window.location.href = '/login';
+        }
+    } catch (error) {
+        console.error('Session check error:', error);
+        window.location.href = '/login';
     }
 } 

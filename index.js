@@ -6,6 +6,10 @@ const os = require('os');
 const app = express();
 const PORT = process.env.PORT || 3000;
 const { sendEmail } = require('./utils/email');
+const session = require('express-session');
+const cookieParser = require('cookie-parser');
+const auth = require('./middleware/auth');
+const authRoutes = require('./routes/auth');
 
 // At the top of the file, add a logging utility
 const log = {
@@ -133,6 +137,35 @@ try {
                 `);
                 initializeSettings.run();
 
+                db.prepare(`
+                    CREATE TABLE IF NOT EXISTS users (
+                        id INTEGER PRIMARY KEY AUTOINCREMENT,
+                        username TEXT UNIQUE NOT NULL,
+                        password_hash TEXT NOT NULL,
+                        role TEXT NOT NULL DEFAULT 'admin',
+                        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                        last_login DATETIME,
+                        settings_json TEXT
+                    )
+                `).run();
+
+                // Create default admin if none exists
+                const hasAdmin = db.prepare('SELECT id FROM users WHERE role = ?').get('admin');
+                if (!hasAdmin) {
+                    // Default credentials (should be changed on first login)
+                    const defaultAdmin = {
+                        username: 'admin',
+                        // You should use a proper password hashing library like bcrypt
+                        password_hash: 'CHANGE_ME_ON_FIRST_LOGIN',
+                        role: 'admin'
+                    };
+                    
+                    db.prepare(`
+                        INSERT INTO users (username, password_hash, role)
+                        VALUES (?, ?, ?)
+                    `).run(defaultAdmin.username, defaultAdmin.password_hash, defaultAdmin.role);
+                }
+
             } catch (tableError) {
                 log.error('Error creating database tables:', tableError);
                 if (db) db.close();
@@ -168,6 +201,9 @@ try {
 
         // Add these routes before your API routes
         app.get('/dashboard', (req, res) => {
+            if (!req.session?.user) {
+                return res.redirect('/login');
+            }
             res.sendFile(path.join(__dirname, 'public', 'dashboard.html'));
         });
 
@@ -468,6 +504,35 @@ try {
                     error: error.message
                 });
             }
+        });
+
+        // Add after other middleware
+        app.use(cookieParser());
+        app.use(session({
+            secret: process.env.SESSION_SECRET || 'your-secret-key',
+            resave: false,
+            saveUninitialized: false,
+            cookie: {
+                secure: process.env.NODE_ENV === 'production',
+                httpOnly: true,
+                maxAge: 24 * 60 * 60 * 1000 // 24 hours
+            }
+        }));
+
+        // Add auth routes
+        app.use('/api/auth', authRoutes(db));
+
+        // Protect dashboard routes
+        app.use('/dashboard', auth);
+        app.use('/api/settings', auth);
+
+        // Add this with your other routes
+        app.get('/login', (req, res) => {
+            // If already logged in, redirect to dashboard
+            if (req.session?.user) {
+                return res.redirect('/dashboard');
+            }
+            res.sendFile(path.join(__dirname, 'public', 'login.html'));
         });
 
         // Modified server start with better error handling

@@ -109,3 +109,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Better time slot validation
 - Last booking time restrictions
 - Clear help text for operating hours
+
+## [1.1.15] - 2024-03-20
+### Added
+- Admin authentication system
+- Login/logout functionality
+- Session management
+- Protected dashboard routes
+- Default admin user creation
+- Login page with styling
+
+### Changed
+- Dashboard now requires authentication
+- Settings API routes protected
+- Improved security for admin functions
