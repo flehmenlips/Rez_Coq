@@ -98,6 +98,13 @@ document.addEventListener('DOMContentLoaded', () => {
 
 document.getElementById('reservationForm').addEventListener('submit', async (e) => {
     e.preventDefault();
+    
+    // Show loading spinner
+    const submitButton = e.target.querySelector('button[type="submit"]');
+    const originalText = submitButton.textContent;
+    submitButton.disabled = true;
+    submitButton.innerHTML = '<span class="spinner"></span> Submitting...';
+    
     const formData = new FormData(e.target);
     const reservation = Object.fromEntries(formData.entries());
 
@@ -120,6 +127,9 @@ document.getElementById('reservationForm').addEventListener('submit', async (e) 
         window.location.href = '/reservation-success.html';
     } catch (error) {
         alert('Error making reservation: ' + error.message);
+        // Reset button on error
+        submitButton.disabled = false;
+        submitButton.textContent = originalText;
     }
 });
 

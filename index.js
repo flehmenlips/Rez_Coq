@@ -9,6 +9,10 @@ const PORT = process.env.PORT || 3000;
 // At the top of the file, add a logging utility
 const log = {
     info: (...args) => {
+        const message = args.map(arg => 
+            typeof arg === 'object' ? JSON.stringify(arg, null, 2) : arg
+        ).join(' ');
+
         if (process.env.NODE_ENV !== 'production') {
             console.log(...args);
         }
@@ -18,24 +22,26 @@ const log = {
             try {
                 fs.mkdirSync(logDir, { recursive: true, mode: 0o700 });
                 fs.appendFileSync(
-                    path.join(logDir, 'app.log'), // Changed from error.log
-                    `${new Date().toISOString()} [INFO]: ${args.join(' ')}\n`
+                    path.join(logDir, 'app.log'),
+                    `${new Date().toISOString()} [INFO]:\n${message}\n`
                 );
             } catch (e) {
-                // If we can't write logs, log to console as fallback
                 console.log('Logging error:', e);
             }
         }
     },
     error: (...args) => {
-        // For errors, always write to file in production
+        const message = args.map(arg => 
+            typeof arg === 'object' ? JSON.stringify(arg, null, 2) : arg
+        ).join(' ');
+
         if (process.env.NODE_ENV === 'production') {
             const logDir = path.join(os.homedir(), '.rez_coq', 'logs');
             try {
                 fs.mkdirSync(logDir, { recursive: true, mode: 0o700 });
                 fs.appendFileSync(
                     path.join(logDir, 'error.log'),
-                    `${new Date().toISOString()} [ERROR]: ${args.join(' ')}\n`
+                    `${new Date().toISOString()} [ERROR]:\n${message}\n`
                 );
             } catch (e) {
                 console.error('Logging error:', e);
