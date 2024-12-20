@@ -1,12 +1,13 @@
 {
   "name": "rez_coq",
-  "version": "1.1.13-1",
+  "version": "1.1.13-2",
   "description": "Restaurant Reservation System for Le Coq d'Or",
   "author": "George Page",
   "license": "MIT",
   "main": "main.js",
   "scripts": {
     "start": "electron .",
+    "start:prod": "NODE_ENV=production electron .",
     "build": "electron-builder",
     "test": "echo \"Warning: No tests implemented yet\"",
     "pack": "electron-builder --dir",

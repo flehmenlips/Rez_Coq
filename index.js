@@ -6,6 +6,32 @@ const os = require('os');
 const app = express();
 const PORT = process.env.PORT || 3000;
 
+// At the top of the file, add a logging utility
+const log = {
+    info: (...args) => {
+        if (process.env.NODE_ENV !== 'production') {
+            console.log(...args);
+        }
+    },
+    error: (...args) => {
+        // For errors, write to a file in production
+        if (process.env.NODE_ENV === 'production') {
+            const logDir = path.join(os.homedir(), '.rez_coq', 'logs');
+            try {
+                fs.mkdirSync(logDir, { recursive: true, mode: 0o700 });
+                fs.appendFileSync(
+                    path.join(logDir, 'error.log'),
+                    `${new Date().toISOString()}: ${args.join(' ')}\n`
+                );
+            } catch (e) {
+                // Silently fail if we can't write logs
+            }
+        } else {
+            console.error(...args);
+        }
+    }
+};
+
 // Database setup
 const dbDir = app.isPackaged 
     ? path.join(os.homedir(), '.rez_coq', 'db')
@@ -26,7 +52,7 @@ try {
     let db;
     // If database doesn't exist, create it
     if (!fs.existsSync(dbPath)) {
-        console.log('Creating new database at:', dbPath);
+        log.info('Creating new database at:', dbPath);
         try {
             db = new Database(dbPath);
             
@@ -67,14 +93,14 @@ try {
                 initializeSettings.run();
 
             } catch (tableError) {
-                console.error('Error creating database tables:', tableError);
+                log.error('Error creating database tables:', tableError);
                 if (db) db.close();
                 throw new Error(`Failed to create database tables: ${tableError.message}`);
             }
             
             db.close();
         } catch (dbError) {
-            console.error('Error creating database:', dbError);
+            log.error('Error creating database:', dbError);
             throw new Error(`Failed to create database: ${dbError.message}`);
         }
     }
@@ -306,18 +332,18 @@ try {
             }
         });
 
-        // Modified server start with error handling
+        // Modified server start with better error handling
         const server = app.listen(PORT, () => {
-            console.log(`Server is running on port ${PORT}`)
+            log.info(`Server is running on port ${PORT}`);
         }).on('error', (err) => {
             if (err.code === 'EADDRINUSE') {
-                console.log(`Port ${PORT} is busy, trying ${PORT + 1}`)
-                server.close()
-                app.listen(PORT + 1)
+                log.info(`Port ${PORT} is busy, trying ${PORT + 1}`);
+                server.close();
+                app.listen(PORT + 1);
             } else {
-                console.error('Server error:', err)
+                log.error('Server error:', err);
             }
-        })
+        });
 
         module.exports = app
     } catch (dbError) {

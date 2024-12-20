@@ -47,7 +47,7 @@ echo "3. Skipping tests (TODO: Implement test suite)"
 
 # Database initialization test
 echo "4. Testing database initialization..."
-NODE_ENV=development npm start &
+NODE_ENV=production npm run start:prod &
 SERVER_PID=$!
 sleep 5  # Give the server time to start
 
