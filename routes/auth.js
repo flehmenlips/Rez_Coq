@@ -8,17 +8,22 @@ module.exports = (db) => {
         const { username, password } = req.body;
         
         try {
+            console.log('Login attempt:', { username, body: req.body });
             const user = db.prepare('SELECT * FROM users WHERE username = ?').get(username);
             
             if (!user) {
+                console.log('User not found');
                 return res.status(401).json({
                     success: false,
                     message: 'Invalid credentials'
                 });
             }
             
+            console.log('User found:', { id: user.id, username: user.username });
+            
             // For first login with default password
             if (user.password_hash === 'CHANGE_ME_ON_FIRST_LOGIN') {
+                console.log('First login detected, updating password');
                 // Store the new password
                 const hashedPassword = await bcrypt.hash(password, 10);
                 db.prepare('UPDATE users SET password_hash = ? WHERE id = ?')
