@@ -101,4 +101,43 @@
     padding: 1.5rem;
     border-radius: 8px;
     box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+/* Email status styles */
+.email-status {
+    padding: 4px 8px;
+    border-radius: 4px;
+    font-weight: 500;
+}
+
+.email-status.pending {
+    background-color: #fff3cd;
+    color: #856404;
+}
+
+.email-status.sent {
+    background-color: #d4edda;
+    color: #155724;
+}
+
+.email-status.failed {
+    background-color: #f8d7da;
+    color: #721c24;
+    position: relative;
+}
+
+.error-tooltip {
+    display: none;
+    position: absolute;
+    background: #fff;
+    border: 1px solid #ddd;
+    padding: 8px;
+    border-radius: 4px;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    z-index: 100;
+    max-width: 300px;
+}
+
+.email-status.failed:hover .error-tooltip {
+    display: block;
 } 

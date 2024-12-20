@@ -5,6 +5,7 @@ const fs = require('fs');
 const os = require('os');
 const app = express();
 const PORT = process.env.PORT || 3000;
+const { sendEmail } = require('./utils/email');
 
 // At the top of the file, add a logging utility
 const log = {
@@ -106,7 +107,10 @@ try {
                         date TEXT NOT NULL,
                         time TEXT NOT NULL,
                         guests INTEGER NOT NULL,
-                        created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+                        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                        email_status TEXT DEFAULT 'pending',
+                        email_sent_at DATETIME,
+                        email_error TEXT
                     )
                 `).run();
 
@@ -180,7 +184,7 @@ try {
         }
 
         // Routes
-        app.post('/api/reservations', (req, res) => {
+        app.post('/api/reservations', async (req, res) => {
             log.info('Received reservation:', req.body);
             
             const { date, time, guests, email, name } = req.body;
@@ -225,6 +229,36 @@ try {
                 
                 const result = insertStmt.run(date, time, guests, email, name);
                 log.info('Reservation saved:', result);
+                
+                try {
+                    await sendEmail(email, 'confirmation', {
+                        id: result.lastInsertRowid,
+                        date,
+                        time,
+                        guests,
+                        name,
+                        email
+                    });
+                    
+                    // Update email status
+                    db.prepare(`
+                        UPDATE reservations 
+                        SET email_status = 'sent',
+                            email_sent_at = datetime('now')
+                        WHERE id = ?
+                    `).run(result.lastInsertRowid);
+                    
+                } catch (emailError) {
+                    log.error('Email sending failed:', emailError);
+                    
+                    // Update email status with error
+                    db.prepare(`
+                        UPDATE reservations 
+                        SET email_status = 'failed',
+                            email_error = ?
+                        WHERE id = ?
+                    `).run(emailError.message, result.lastInsertRowid);
+                }
                 
                 res.json({
                     success: true,
@@ -341,6 +375,97 @@ try {
             } catch (error) {
                 log.error('Error generating available times:', error);
                 res.status(500).json({ error: error.message });
+            }
+        });
+
+        // Add this near your other routes
+        app.get('/api/test-email', async (req, res) => {
+            try {
+                log.info('Starting email test...');
+                const { testEmailSetup } = require('./utils/email');
+                log.info('Email configuration:', {
+                    host: process.env.SMTP_HOST,
+                    port: process.env.SMTP_PORT,
+                    user: process.env.SMTP_USER,
+                    // Don't log the password!
+                });
+                
+                const result = await testEmailSetup();
+                log.info('Email test result:', result);
+                
+                if (result) {
+                    res.json({ success: true, message: 'Test email sent successfully' });
+                } else {
+                    res.status(500).json({ success: false, message: 'Test email failed' });
+                }
+            } catch (error) {
+                log.error('Email test failed with error:', error);
+                res.status(500).json({ 
+                    success: false, 
+                    message: 'Email test failed', 
+                    error: error.message,
+                    stack: process.env.NODE_ENV === 'development' ? error.stack : undefined
+                });
+            }
+        });
+
+        // Add this with your other routes
+        app.post('/api/reservations/:id/retry-email', async (req, res) => {
+            const { id } = req.params;
+            
+            try {
+                // Get reservation details
+                const reservation = db.prepare(`
+                    SELECT * FROM reservations WHERE id = ?
+                `).get(id);
+                
+                if (!reservation) {
+                    return res.status(404).json({
+                        success: false,
+                        message: 'Reservation not found'
+                    });
+                }
+                
+                // Try to send email
+                await sendEmail(reservation.email, 'confirmation', {
+                    id: reservation.id,
+                    date: reservation.date,
+                    time: reservation.time,
+                    guests: reservation.guests,
+                    name: reservation.name,
+                    email: reservation.email
+                });
+                
+                // Update email status
+                db.prepare(`
+                    UPDATE reservations 
+                    SET email_status = 'sent',
+                        email_sent_at = datetime('now'),
+                        email_error = NULL
+                    WHERE id = ?
+                `).run(id);
+                
+                res.json({
+                    success: true,
+                    message: 'Email sent successfully'
+                });
+                
+            } catch (error) {
+                log.error('Retry email failed:', error);
+                
+                // Update error status
+                db.prepare(`
+                    UPDATE reservations 
+                    SET email_status = 'failed',
+                        email_error = ?
+                    WHERE id = ?
+                `).run(error.message, id);
+                
+                res.status(500).json({
+                    success: false,
+                    message: 'Failed to send email',
+                    error: error.message
+                });
             }
         });
 

@@ -40,23 +40,7 @@ document.getElementById('settingsForm').addEventListener('submit', async (e) => 
 // Function to load reservations
 async function loadReservations() {
     try {
-        const response = await fetch('/api/reservations');
-        const reservations = await response.json();
-        
-        const tbody = document.getElementById('reservationsList');
-        tbody.innerHTML = ''; // Clear existing rows
-        
-        reservations.forEach(reservation => {
-            const row = document.createElement('tr');
-            row.innerHTML = `
-                <td>${reservation.date}</td>
-                <td>${reservation.time}</td>
-                <td>${reservation.name}</td>
-                <td>${reservation.guests}</td>
-                <td>${reservation.email}</td>
-            `;
-            tbody.appendChild(row);
-        });
+        await updateReservationsList();
     } catch (error) {
         console.error('Error loading reservations:', error);
     }
@@ -64,3 +48,61 @@ async function loadReservations() {
 
 // Refresh reservations every 30 seconds
 setInterval(loadReservations, 30000); 
+
+function updateReservationsList() {
+    fetch('/api/reservations')
+        .then(response => response.json())
+        .then(reservations => {
+            const tbody = document.getElementById('reservationsList');
+            tbody.innerHTML = '';
+            
+            reservations.forEach(reservation => {
+                const tr = document.createElement('tr');
+                
+                // Format date
+                const date = new Date(reservation.date).toLocaleDateString();
+                
+                tr.innerHTML = `
+                    <td>${date}</td>
+                    <td>${reservation.time}</td>
+                    <td>${reservation.name}</td>
+                    <td>${reservation.guests}</td>
+                    <td>${reservation.email}</td>
+                    <td class="email-status ${reservation.email_status}">
+                        ${reservation.email_status}
+                        ${reservation.email_error ? 
+                            `<span class="error-tooltip">${reservation.email_error}</span>` 
+                            : ''}
+                    </td>
+                    <td>
+                        ${reservation.email_status === 'failed' ? 
+                            `<button onclick="retryEmail(${reservation.id})">
+                                Retry Email
+                            </button>` 
+                            : ''}
+                    </td>
+                `;
+                
+                tbody.appendChild(tr);
+            });
+        });
+}
+
+// Add retry functionality
+async function retryEmail(reservationId) {
+    try {
+        const response = await fetch(`/api/reservations/${reservationId}/retry-email`, {
+            method: 'POST'
+        });
+        const result = await response.json();
+        
+        if (result.success) {
+            alert('Email sent successfully');
+            updateReservationsList();
+        } else {
+            alert('Failed to send email: ' + result.message);
+        }
+    } catch (error) {
+        alert('Error retrying email: ' + error.message);
+    }
+} 

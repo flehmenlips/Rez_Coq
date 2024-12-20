@@ -3,7 +3,10 @@ dev_db/
 .rez_coq/
 .DS_Store
 *.log
-.env 
+.env
+.env.local
+.env.development
+.env.production
 # Build output
 dist/
 # Old CSS files
