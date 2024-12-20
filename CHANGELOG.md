@@ -48,6 +48,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - New settings table for application configuration
 - Default settings for restaurant operation parameters
 
+## [1.1.13] - 2024-12-20
+### Fixed
+- Fixed database paths for production and development environments
+- Improved logging system with better formatting
+- Added loading spinner for reservation submissions
+- Fixed duplicate log entries
+- Consolidated database initialization
+- Added proper error handling for database operations
+
+### Added
+- Production-safe logging system
+- Visual feedback during form submission
+- Success page with proper styling
+- Database path detection for packaged app
+
 ## [1.1.13] - YYYY-MM-DD
 ### Fixed
 - Improved database initialization with proper error handling

@@ -6,3 +6,7 @@ dev_db/
 .env 
 # Build output
 dist/
+# Old CSS files
+public/style.css
+public/styles.css
+public/dashboard.css
