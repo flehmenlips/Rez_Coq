@@ -33,10 +33,14 @@ const log = {
 };
 
 // Database setup
-const dbDir = app.isPackaged 
+const dbDir = app.isPackaged || process.env.NODE_ENV === 'production'
     ? path.join(os.homedir(), '.rez_coq', 'db')
     : path.join(__dirname, 'dev_db');
 const dbPath = path.join(dbDir, 'database.sqlite');
+
+// Log the database path for debugging
+log.info('Database directory:', dbDir);
+log.info('Database path:', dbPath);
 
 // Ensure database directory exists
 try {
@@ -256,7 +260,7 @@ try {
         // Add this after your other routes
         app.get('/api/available-times', (req, res) => {
             const date = req.query.date;
-            console.log('Fetching times for date:', date);
+            log.info('Fetching times for date:', date);
             
             try {
                 // Get all settings at once using synchronous get()
@@ -284,14 +288,14 @@ try {
 
                 res.json(slots);
             } catch (error) {
-                console.error('Error generating available times:', error);
+                log.error('Error generating available times:', error);
                 res.status(500).json({ error: error.message });
             }
         });
 
         // Add reservation endpoint
         app.post('/api/reservations', (req, res) => {
-            console.log('Received reservation:', req.body);
+            log.info('Received reservation:', req.body);
             
             const { date, time, guests, email, name } = req.body;
             
@@ -324,7 +328,7 @@ try {
                     id: info.lastInsertRowid
                 });
             } catch (err) {
-                console.error('Error saving reservation:', err);
+                log.error('Error saving reservation:', err);
                 res.status(500).json({
                     success: false,
                     message: 'Error saving reservation'
@@ -347,16 +351,16 @@ try {
 
         module.exports = app
     } catch (dbError) {
-        console.error('Error opening database:', dbError);
+        log.error('Error opening database:', dbError);
         if (db) db.close();
         throw new Error(`Failed to open database: ${dbError.message}`);
     }
 
 } catch (err) {
-    console.error('Critical database initialization error:', err);
+    log.error('Critical database initialization error:', err);
     // Attempt to start the application in a degraded mode or exit gracefully
     if (process.env.NODE_ENV === 'production') {
-        console.error('Exiting application due to critical database error');
+        log.error('Exiting application due to critical database error');
         process.exit(1);
     } else {
         // In development, throw the error for better debugging

@@ -34,7 +34,6 @@ echo -e "\nStarting release process for v$VERSION..."
 echo "1. Cleaning environment..."
 rm -rf node_modules/
 rm -rf dist/
-rm -rf dev_db/  # Remove development database
 rm -rf ~/.rez_coq/  # Remove production database
 
 echo "2. Fresh install of dependencies..."

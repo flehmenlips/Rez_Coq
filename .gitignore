@@ -1,9 +1,8 @@
 node_modules/
-db/
+dev_db/
+.rez_coq/
 .DS_Store
 *.log
 .env 
 # Build output
 dist/
-dev_db/
-dev_db/database.sqlite
