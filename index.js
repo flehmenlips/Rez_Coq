@@ -128,7 +128,8 @@ try {
                     ('daily_max_guests', '100'),
                     ('opening_time', '11:00'),
                     ('closing_time', '22:00'),
-                    ('slot_duration', '30')
+                    ('slot_duration', '30'),
+                    ('max_party_size', '12')
                 `);
                 initializeSettings.run();
 
@@ -500,3 +501,37 @@ try {
         throw err;
     }
 }
+
+app.post('/api/time-slots/availability', (req, res) => {
+    const { date, time, guests } = req.body;
+    
+    try {
+        // Get settings
+        const settings = db.prepare('SELECT * FROM settings').all()
+            .reduce((acc, row) => ({ ...acc, [row.key]: row.value }), {});
+        
+        // Get total reservations for this time slot
+        const existingReservations = db.prepare(`
+            SELECT SUM(guests) as total
+            FROM reservations 
+            WHERE date = ? AND time = ?
+        `).get(date, time);
+        
+        const totalGuests = existingReservations?.total || 0;
+        const maxGuests = parseInt(settings.daily_max_guests);
+        const remainingCapacity = maxGuests - totalGuests;
+        
+        res.json({
+            isAvailable: remainingCapacity >= parseInt(guests),
+            remainingCapacity,
+            message: remainingCapacity < parseInt(guests) 
+                ? `Sorry, only ${remainingCapacity} spots available at this time`
+                : 'Time slot available'
+        });
+    } catch (error) {
+        res.status(500).json({ 
+            error: 'Error checking availability',
+            message: error.message 
+        });
+    }
+});

@@ -25,8 +25,17 @@
         </div>
         
         <div class="form-group">
-            <label for="guests">Number of Guests:</label>
-            <input type="number" class="form-control" id="guests" name="guests" min="1" required>
+            <label for="guests">Number of Guests</label>
+            <input type="number" 
+                   class="form-control" 
+                   id="guests" 
+                   name="guests" 
+                   min="1" 
+                   required
+                   data-bs-toggle="tooltip" 
+                   data-bs-placement="top" 
+                   title="For larger groups, please call us directly">
+            <small class="form-text text-muted">Maximum party size varies by time and date</small>
         </div>
         
         <div class="form-group">
@@ -51,6 +60,10 @@
             <div class="modal-body">
                 <div class="time-slots" id="timeSlots">
                     <!-- Time slots will be populated here -->
+                </div>
+                <div id="timeSlotLoading" class="text-center p-3" style="display: none;">
+                    <div class="spinner"></div>
+                    <p class="mt-2">Loading available times...</p>
                 </div>
             </div>
         </div>
@@ -214,5 +227,41 @@
         }
     });
     </script>
+
+    <!-- Error Modal -->
+    <div class="modal" id="errorModal" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="errorModalLabel">Reservation Error</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <div id="errorMessage"></div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Confirmation Modal -->
+    <div class="modal" id="confirmationModal" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Reservation Confirmed!</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <div id="reservationDetails"></div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-primary" data-bs-dismiss="modal">Close</button>
+                </div>
+            </div>
+        </div>
+    </div>
 </body>
 </html>

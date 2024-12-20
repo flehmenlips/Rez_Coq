@@ -77,3 +77,35 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - opening_time (11:00)
   - closing_time (22:00)
   - slot_duration (30)
+
+## [1.1.13-9] - 2024-03-20
+### Added
+- Email confirmation system for reservations
+- Email status tracking in database
+- Email retry functionality in dashboard
+- Visual email status indicators
+- Test email endpoint for system verification
+
+### Changed
+- Dashboard now shows email status for each reservation
+- Reservation flow includes email confirmation
+- Database schema updated to track email status
+
+### Technical Details
+- Added nodemailer integration
+- Email template system
+- SMTP configuration via environment variables
+- Error handling for failed emails
+- Status tracking: pending/sent/failed
+
+## [1.1.14] - 2024-03-20
+### Changed
+- Simplified operating hours settings in dashboard
+- Improved time slot generation logic
+- Added strict validation for reservation times
+- Fixed duplicate time settings conflict
+
+### Added
+- Better time slot validation
+- Last booking time restrictions
+- Clear help text for operating hours

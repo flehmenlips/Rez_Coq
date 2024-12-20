@@ -14,12 +14,14 @@
         <h1>Restaurant Settings Dashboard</h1>
         <form id="settingsForm">
             <div class="setting-group">
-                <label for="opening_hours">Operating Hours:</label>
-                <input type="text" id="opening_hours" name="opening_hours" placeholder="09:00-22:00">
-            </div>
-            <div class="setting-group">
                 <label for="max_party_size">Maximum Party Size:</label>
-                <input type="number" id="max_party_size" name="max_party_size" min="1">
+                <input type="number" 
+                       id="max_party_size" 
+                       name="max_party_size" 
+                       min="1" 
+                       value="12"
+                       required>
+                <small class="setting-help">Maximum number of guests per reservation</small>
             </div>
             <div class="setting-group">
                 <label for="time_slot_interval">Time Slot Interval (minutes):</label>
@@ -45,7 +47,7 @@
                 </select>
             </div>
             <div class="setting-group">
-                <label for="service_hours">Service Hours</label>
+                <label for="service_hours">Operating Hours</label>
                 <div class="time-range-inputs">
                     <div>
                         <label for="opening_time">Opens:</label>
@@ -56,6 +58,7 @@
                         <input type="time" id="closing_time" name="closing_time" value="22:00">
                     </div>
                 </div>
+                <small class="setting-help">Set the hours during which reservations can be made</small>
             </div>
             <div class="setting-group">
                 <label for="slot_duration">Time Slot Duration</label>
