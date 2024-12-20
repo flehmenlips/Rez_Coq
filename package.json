@@ -1,14 +1,17 @@
 {
   "name": "rez_coq",
-  "version": "1.1.12",
+  "version": "1.1.13",
   "description": "Restaurant Reservation System for Le Coq d'Or",
   "author": "George Page",
   "license": "MIT",
   "main": "main.js",
   "scripts": {
     "start": "electron .",
-    "build": "electron-builder --mac --arm64",
-    "dev": "nodemon --watch '*.js' --watch 'public/*.html' --watch 'public/*.css' index.js"
+    "build": "electron-builder",
+    "test": "echo \"Warning: No tests implemented yet\"",
+    "pack": "electron-builder --dir",
+    "dist": "electron-builder",
+    "rebuild": "electron-rebuild -f -w better-sqlite3"
   },
   "build": {
     "appId": "com.rezcoq.app",
@@ -32,12 +35,13 @@
     ]
   },
   "dependencies": {
-    "express": "^4.18.2",
-    "better-sqlite3": "^9.2.2"
+    "better-sqlite3": "^9.4.0",
+    "express": "^4.18.2"
   },
   "devDependencies": {
     "electron": "^28.0.0",
     "electron-builder": "^25.1.8",
+    "electron-rebuild": "^3.2.9",
     "nodemon": "^3.0.2"
   }
 }

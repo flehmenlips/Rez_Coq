@@ -35,3 +35,30 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Changed
 - Reservation form now validates against daily capacity
 - Time slot selector disabled when capacity is reached
+
+## [1.0.1] - YYYY-MM-DD
+### Fixed
+- Improved database initialization with proper error handling
+- Added settings table with default values
+- Added database structure verification
+- Implemented graceful shutdown for database errors in production
+- Added better error reporting and logging for database operations
+
+### Added
+- New settings table for application configuration
+- Default settings for restaurant operation parameters
+
+## [1.1.13] - YYYY-MM-DD
+### Fixed
+- Improved database initialization with proper error handling
+- Added settings table with default values
+- Added database structure verification
+- Implemented graceful shutdown for database errors in production
+- Added better error reporting and logging for database operations
+
+### Added
+- Default settings for restaurant operation parameters:
+  - daily_max_guests (100)
+  - opening_time (11:00)
+  - closing_time (22:00)
+  - slot_duration (30)
