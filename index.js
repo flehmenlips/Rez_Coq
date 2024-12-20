@@ -10,6 +10,7 @@ const session = require('express-session');
 const cookieParser = require('cookie-parser');
 const auth = require('./middleware/auth');
 const authRoutes = require('./routes/auth');
+let db; // Global database connection
 
 // At the top of the file, add a logging utility
 const log = {
@@ -90,7 +91,6 @@ try {
         mode: 0o700
     });
 
-    let db;
     // If database doesn't exist, create it
     if (!fs.existsSync(dbPath)) {
         log.info('Creating new database at:', dbPath);
@@ -142,7 +142,9 @@ try {
                         id INTEGER PRIMARY KEY AUTOINCREMENT,
                         username TEXT UNIQUE NOT NULL,
                         password_hash TEXT NOT NULL,
-                        role TEXT NOT NULL DEFAULT 'admin',
+                        role TEXT NOT NULL DEFAULT 'customer' CHECK(role IN ('admin', 'customer')),
+                        email TEXT UNIQUE,
+                        verified BOOLEAN DEFAULT 0,
                         created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
                         last_login DATETIME,
                         settings_json TEXT
@@ -152,18 +154,24 @@ try {
                 // Create default admin if none exists
                 const hasAdmin = db.prepare('SELECT id FROM users WHERE role = ?').get('admin');
                 if (!hasAdmin) {
-                    // Default credentials (should be changed on first login)
                     const defaultAdmin = {
                         username: 'admin',
-                        // You should use a proper password hashing library like bcrypt
                         password_hash: 'CHANGE_ME_ON_FIRST_LOGIN',
-                        role: 'admin'
+                        role: 'admin',
+                        email: 'admin@rezcoq.com',
+                        verified: 1
                     };
                     
                     db.prepare(`
-                        INSERT INTO users (username, password_hash, role)
-                        VALUES (?, ?, ?)
-                    `).run(defaultAdmin.username, defaultAdmin.password_hash, defaultAdmin.role);
+                        INSERT INTO users (username, password_hash, role, email, verified)
+                        VALUES (?, ?, ?, ?, ?)
+                    `).run(
+                        defaultAdmin.username, 
+                        defaultAdmin.password_hash, 
+                        defaultAdmin.role,
+                        defaultAdmin.email,
+                        defaultAdmin.verified
+                    );
                 }
 
             } catch (tableError) {
@@ -171,8 +179,6 @@ try {
                 if (db) db.close();
                 throw new Error(`Failed to create database tables: ${tableError.message}`);
             }
-            
-            db.close();
         } catch (dbError) {
             log.error('Error creating database:', dbError);
             throw new Error(`Failed to create database: ${dbError.message}`);
@@ -186,17 +192,48 @@ try {
         // Verify database connection and structure
         const tables = db.prepare(`
             SELECT name FROM sqlite_master 
-            WHERE type='table' AND (name='reservations' OR name='settings')
+            WHERE type='table'
         `).all();
-        
-        if (tables.length !== 2) {
-            throw new Error('Database structure verification failed');
+        console.log('Database tables:', tables);
+
+        // Verify users table
+        const users = db.prepare('SELECT * FROM users').all();
+        console.log('Users in database:', users.length);
+
+        // Detailed database verification
+        try {
+            const adminUser = db.prepare('SELECT * FROM users WHERE username = ?').get('admin');
+            console.log('Database verification:', {
+                tables: tables.map(t => t.name),
+                usersCount: users.length,
+                adminExists: !!adminUser,
+                adminDetails: adminUser ? {
+                    id: adminUser.id,
+                    username: adminUser.username,
+                    hasDefaultPassword: adminUser.password_hash === 'CHANGE_ME_ON_FIRST_LOGIN'
+                } : null
+            });
+        } catch (verifyError) {
+            console.error('Database verification error:', verifyError);
         }
 
         // Continue with the rest of your application setup...
         // Middleware
         app.use(express.json());
         app.use(express.urlencoded({ extended: true }));
+        app.use(cookieParser());
+        app.use(session({
+            secret: process.env.SESSION_SECRET || 'your-secret-key',
+            resave: false,
+            saveUninitialized: false,
+            name: 'rez_coq_session',
+            cookie: {
+                secure: process.env.NODE_ENV === 'production',
+                httpOnly: true,
+                maxAge: 24 * 60 * 60 * 1000 // 24 hours
+            },
+            store: new session.MemoryStore()
+        }));
         app.use(express.static(path.join(__dirname, 'public')));
 
         // Add these routes before your API routes
@@ -204,7 +241,18 @@ try {
             if (!req.session?.user) {
                 return res.redirect('/login');
             }
+            if (req.session.user.role !== 'admin') {
+                return res.status(403).send('Access denied');
+            }
             res.sendFile(path.join(__dirname, 'public', 'dashboard.html'));
+        });
+
+        // Add user settings route (protected by auth)
+        app.get('/user-settings', (req, res) => {
+            if (!req.session?.user) {
+                return res.redirect('/login');
+            }
+            res.sendFile(path.join(__dirname, 'public', 'user-settings.html'));
         });
 
         app.get('/', (req, res) => {
@@ -506,21 +554,9 @@ try {
             }
         });
 
-        // Add after other middleware
-        app.use(cookieParser());
-        app.use(session({
-            secret: process.env.SESSION_SECRET || 'your-secret-key',
-            resave: false,
-            saveUninitialized: false,
-            cookie: {
-                secure: process.env.NODE_ENV === 'production',
-                httpOnly: true,
-                maxAge: 24 * 60 * 60 * 1000 // 24 hours
-            }
-        }));
-
         // Add auth routes
-        app.use('/api/auth', authRoutes(db));
+        const authRouter = authRoutes(db);
+        app.use('/api/auth', authRouter);
 
         // Protect dashboard routes
         app.use('/dashboard', auth);
@@ -528,11 +564,80 @@ try {
 
         // Add this with your other routes
         app.get('/login', (req, res) => {
-            // If already logged in, redirect to dashboard
             if (req.session?.user) {
                 return res.redirect('/dashboard');
             }
             res.sendFile(path.join(__dirname, 'public', 'login.html'));
+        });
+
+        // Add register route
+        app.get('/register', (req, res) => {
+            if (req.session?.user) {
+                return res.redirect('/dashboard');
+            }
+            res.sendFile(path.join(__dirname, 'public', 'register.html'));
+        });
+
+        // Add this with your other routes
+        app.get('/api/reservations/my-reservations', auth, (req, res) => {
+            try {
+                const stmt = db.prepare(`
+                    SELECT * FROM reservations 
+                    WHERE email = (SELECT email FROM users WHERE id = ?)
+                    ORDER BY date, time
+                `);
+                const rows = stmt.all(req.session.user.id);
+                res.json(rows);
+            } catch (err) {
+                log.error('Error retrieving user reservations:', err);
+                res.status(500).json({ error: 'Error retrieving reservations' });
+            }
+        });
+
+        // Add this with your other routes
+        app.get('/customer-dashboard', (req, res) => {
+            if (!req.session?.user) {
+                return res.redirect('/login');
+            }
+            if (req.session.user.role !== 'customer') {
+                return res.status(403).send('Access denied');
+            }
+            res.sendFile(path.join(__dirname, 'public', 'customer-dashboard.html'));
+        });
+
+        // Add cancel reservation endpoint
+        app.post('/api/reservations/:id/cancel', auth, async (req, res) => {
+            const { id } = req.params;
+            
+            try {
+                // Verify the reservation belongs to this user
+                const reservation = db.prepare(`
+                    SELECT * FROM reservations 
+                    WHERE id = ? AND email = (SELECT email FROM users WHERE id = ?)
+                `).get(id, req.session.user.id);
+                
+                if (!reservation) {
+                    return res.status(404).json({
+                        success: false,
+                        message: 'Reservation not found'
+                    });
+                }
+                
+                // Delete the reservation
+                db.prepare('DELETE FROM reservations WHERE id = ?').run(id);
+                
+                res.json({
+                    success: true,
+                    message: 'Reservation cancelled successfully'
+                });
+                
+            } catch (error) {
+                log.error('Error canceling reservation:', error);
+                res.status(500).json({
+                    success: false,
+                    message: 'Failed to cancel reservation'
+                });
+            }
         });
 
         // Modified server start with better error handling
@@ -546,6 +651,14 @@ try {
             } else {
                 log.error('Server error:', err);
             }
+        });
+
+        // Cleanup on exit
+        process.on('SIGINT', () => {
+            if (db) {
+                db.close();
+            }
+            process.exit(0);
         });
 
         module.exports = app

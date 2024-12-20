@@ -26,3 +26,20 @@ async function generateTimeSlots(openTime, closeTime, duration) {
         throw error;
     }
 }
+
+// Add at the start of the file
+// Check if user is admin and show admin nav if so
+async function checkAdminAccess() {
+    try {
+        const response = await fetch('/api/auth/check-session');
+        const result = await response.json();
+        if (result.authenticated && result.user.role === 'admin') {
+            document.getElementById('adminNav').style.display = 'block';
+        }
+    } catch (error) {
+        console.error('Error checking admin access:', error);
+    }
+}
+
+// Call on page load
+document.addEventListener('DOMContentLoaded', checkAdminAccess);

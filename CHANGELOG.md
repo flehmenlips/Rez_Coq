@@ -6,17 +6,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [1.1.15] - 2024-03-20
 ### Added
-- Admin authentication system
-- Login/logout functionality
-- Session management
-- Protected dashboard routes
-- Default admin user creation
-- Login page with styling
+- Customer registration system
+- Customer dashboard with reservation management
+- Role-based access control
+- Improved login UI and navigation
+- Converted to pure web application
+- Removed Electron desktop wrapper
 
 ### Changed
 - Dashboard now requires authentication
 - Settings API routes protected
 - Improved security for admin functions
+- Simplified deployment process
+- Streamlined dependencies
 
 ## [1.1.14] - 2024-03-20
 ### Changed

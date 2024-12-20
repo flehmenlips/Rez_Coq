@@ -11,7 +11,12 @@
 </head>
 <body>
     <div class="login-container">
-        <h1>Admin Login</h1>
+        <div class="welcome-section">
+            <h1>Welcome to Rez Coq!</h1>
+            <p class="welcome-text">
+                Login or create an account to manage your reservations.
+            </p>
+        </div>
         <form id="loginForm" class="login-form">
             <div class="form-group">
                 <label for="username">Username</label>
@@ -23,6 +28,10 @@
             </div>
             <button type="submit" class="btn btn-primary">Login</button>
         </form>
+        <div class="auth-links">
+            <p>Don't have an account? <a href="/register">Sign up here</a></p>
+            <p class="small text-muted">Restaurant owners? <a href="/admin-login">Admin Login</a></p>
+        </div>
         <div id="loginMessage" class="alert" style="display: none;"></div>
     </div>
     <script src="js/login.js"></script>

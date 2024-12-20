@@ -13,3 +13,4 @@ dist/
 public/style.css
 public/styles.css
 public/dashboard.css
+.venv/

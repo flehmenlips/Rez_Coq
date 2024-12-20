@@ -1,14 +1,18 @@
-document.getElementById('loginForm').addEventListener('submit', async (e) => {
+document.getElementById('registerForm').addEventListener('submit', async (e) => {
     e.preventDefault();
     const form = e.target;
-    const submitButton = form.querySelector('button');
-    submitButton.disabled = true;
+    
+    if (form.password.value !== form.confirmPassword.value) {
+        showMessage('Passwords do not match', 'danger');
+        return;
+    }
     
     try {
-        const response = await fetch('/api/auth/login', {
+        const response = await fetch('/api/auth/register', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
+                email: form.email.value,
                 username: form.username.value,
                 password: form.password.value
             })
@@ -17,23 +21,20 @@ document.getElementById('loginForm').addEventListener('submit', async (e) => {
         const result = await response.json();
         
         if (result.success) {
-            if (result.role === 'admin') {
-                window.location.href = '/dashboard';
-            } else {
-                window.location.href = '/customer-dashboard';
-            }
+            showMessage('Registration successful! Redirecting to login...', 'success');
+            setTimeout(() => {
+                window.location.href = '/login';
+            }, 2000);
         } else {
-            showMessage(result.message || 'Login failed', 'danger');
+            showMessage(result.message || 'Registration failed', 'danger');
         }
     } catch (error) {
-        showMessage('Login failed. Please try again.', 'danger');
-    } finally {
-        submitButton.disabled = false;
+        showMessage('Error during registration', 'danger');
     }
 });
 
 function showMessage(message, type) {
-    const messageDiv = document.getElementById('loginMessage');
+    const messageDiv = document.getElementById('message');
     messageDiv.textContent = message;
     messageDiv.className = `alert alert-${type}`;
     messageDiv.style.display = 'block';
