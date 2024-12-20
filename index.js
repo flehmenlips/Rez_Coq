@@ -10,7 +10,7 @@ const PORT = process.env.PORT || 3000;
 const log = {
     info: (...args) => {
         const message = args.map(arg => 
-            typeof arg === 'object' ? JSON.stringify(arg, null, 2) : arg
+            typeof arg === 'object' ? JSON.stringify(arg, null, 2) : String(arg)
         ).join(' ');
 
         if (process.env.NODE_ENV !== 'production') {
@@ -23,7 +23,7 @@ const log = {
                 fs.mkdirSync(logDir, { recursive: true, mode: 0o700 });
                 fs.appendFileSync(
                     path.join(logDir, 'app.log'),
-                    `${new Date().toISOString()} [INFO]:\n${message}\n`
+                    `${new Date().toISOString()} [INFO]: ${message}\n`
                 );
             } catch (e) {
                 console.log('Logging error:', e);
@@ -32,7 +32,7 @@ const log = {
     },
     error: (...args) => {
         const message = args.map(arg => 
-            typeof arg === 'object' ? JSON.stringify(arg, null, 2) : arg
+            typeof arg === 'object' ? JSON.stringify(arg, null, 2) : String(arg)
         ).join(' ');
 
         if (process.env.NODE_ENV === 'production') {
@@ -41,7 +41,7 @@ const log = {
                 fs.mkdirSync(logDir, { recursive: true, mode: 0o700 });
                 fs.appendFileSync(
                     path.join(logDir, 'error.log'),
-                    `${new Date().toISOString()} [ERROR]:\n${message}\n`
+                    `${new Date().toISOString()} [ERROR]: ${message}\n`
                 );
             } catch (e) {
                 console.error('Logging error:', e);
