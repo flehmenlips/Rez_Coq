@@ -1,5 +1,5 @@
 const express = require('express');
-const sqlite3 = require('sqlite3');
+const Database = require('better-sqlite3');
 const path = require('path');
 const fs = require('fs');
 const app = express();
@@ -18,53 +18,7 @@ if (!fs.existsSync(userDataPath)) {
 const dbPath = path.join(userDataPath, 'database.sqlite');
 
 // Database
-const db = new sqlite3.Database(dbPath, (err) => {
-    if (err) {
-        console.error('Database opening error: ', err);
-    } else {
-        console.log('Connected to SQLite database');
-        
-        // Drop and recreate the reservations table
-        db.exec(`
-            DROP TABLE IF EXISTS reservations;
-            
-            CREATE TABLE reservations (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
-                date TEXT,
-                time TEXT,
-                guests INTEGER,
-                email TEXT,
-                name TEXT,
-                created_at DATETIME DEFAULT CURRENT_TIMESTAMP
-            );
-        `);
-
-        // Create settings table if it doesn't exist
-        db.exec(`
-            CREATE TABLE IF NOT EXISTS settings (
-                key TEXT PRIMARY KEY,
-                value TEXT,
-                description TEXT
-            )
-        `);
-
-        // Insert default settings if they don't exist
-        const defaultSettings = [
-            ['opening_hours', '09:00-22:00', 'Restaurant operating hours'],
-            ['max_party_size', '10', 'Maximum party size allowed'],
-            ['time_slot_interval', '30', 'Reservation time slot interval (minutes)'],
-            ['opening_time', '11:00', 'Restaurant opening time'],
-            ['closing_time', '22:00', 'Restaurant closing time'],
-            ['slot_duration', '30', 'Time slot duration in minutes'],
-            ['daily_max_guests', '100', 'Maximum number of guests allowed per day']
-        ];
-
-        const insertStmt = db.prepare('INSERT OR IGNORE INTO settings (key, value, description) VALUES (?, ?, ?)')
-        defaultSettings.forEach(setting => {
-            insertStmt.run(setting)
-        });
-    }
-});
+const db = new Database(dbPath);
 
 // Middleware
 app.use(express.json());
