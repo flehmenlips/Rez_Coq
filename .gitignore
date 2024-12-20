@@ -5,3 +5,5 @@ db/
 .env 
 # Build output
 dist/
+dev_db/
+dev_db/database.sqlite

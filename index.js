@@ -8,7 +8,7 @@ const PORT = process.env.PORT || 3000;
 
 // Database setup
 const dbDir = app.isPackaged 
-    ? path.join(os.homedir(), '.rez_coq')
+    ? path.join(os.homedir(), '.rez_coq', 'db')
     : path.join(__dirname, 'dev_db');
 const dbPath = path.join(dbDir, 'database.sqlite');
 
