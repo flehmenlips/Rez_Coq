@@ -1,7 +1,12 @@
 const { app, BrowserWindow } = require('electron')
 const path = require('path')
-const express = require('express')
-const server = require('./index.js')  // Import your server file
+
+// Set production environment when app is packaged
+if (app.isPackaged) {
+    process.env.NODE_ENV = 'production';
+}
+
+const server = require('./index.js')
 
 let mainWindow = null
 

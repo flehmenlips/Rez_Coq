@@ -33,26 +33,33 @@ const log = {
 };
 
 // Database setup
-const dbDir = app.isPackaged || process.env.NODE_ENV === 'production'
+const isProduction = app.isPackaged || process.env.NODE_ENV === 'production';
+const dbDir = isProduction
     ? path.join(os.homedir(), '.rez_coq', 'db')
     : path.join(__dirname, 'dev_db');
 const dbPath = path.join(dbDir, 'database.sqlite');
 
 // Log the database path for debugging
+log.info('Environment:', isProduction ? 'production' : 'development');
 log.info('Database directory:', dbDir);
 log.info('Database path:', dbPath);
 
 // Ensure database directory exists
 try {
-    // Create directory with restrictive permissions (0o700 = rwx------)
-    fs.mkdirSync(dbDir, { 
+    // Only try to create dev_db if we're in development
+    if (!isProduction) {
+        fs.mkdirSync(path.join(__dirname, 'dev_db'), { 
+            recursive: true, 
+            mode: 0o700
+        });
+    }
+
+    // Always create the production directory structure
+    fs.mkdirSync(path.join(os.homedir(), '.rez_coq', 'db'), { 
         recursive: true, 
         mode: 0o700
     });
-    
-    // Ensure directory permissions are correct even if it already existed
-    fs.chmodSync(dbDir, 0o700);
-    
+
     let db;
     // If database doesn't exist, create it
     if (!fs.existsSync(dbPath)) {
@@ -148,90 +155,109 @@ try {
         }
 
         // Routes
-        app.post('/api/reservation', async (req, res) => {
+        app.post('/api/reservations', (req, res) => {
+            log.info('Received reservation:', req.body);
+            
             const { date, time, guests, email, name } = req.body;
             
             try {
-                // Get daily maximum from settings - using synchronous get()
+                // Check capacity first
                 const settingRow = db.prepare('SELECT value FROM settings WHERE key = ?').get('daily_max_guests');
                 const maxGuests = parseInt(settingRow.value);
 
-                // Get current total for the date - using synchronous get()
                 const totalRow = db.prepare('SELECT SUM(guests) as total FROM reservations WHERE date = ?').get(date);
                 const currentTotal = totalRow.total || 0;
 
                 // Check if new reservation would exceed capacity
                 if (currentTotal + parseInt(guests) > maxGuests) {
                     return res.status(400).json({
-                        error: 'Capacity exceeded',
-                        message: 'Sorry, we don\'t have enough capacity for this date'
+                        success: false,
+                        message: `Sorry, we don't have enough capacity for ${guests} guests on this date. Remaining capacity: ${maxGuests - currentTotal}`
                     });
                 }
 
-                // If capacity is available, proceed with reservation
-                const stmt = db.prepare(`INSERT INTO reservations (date, time, guests, email, name) 
-                        VALUES (?, ?, ?, ?, ?)`);
-                const result = stmt.run(date, time, guests, email, name);
+                // Check for existing reservation
+                const checkStmt = db.prepare(`
+                    SELECT id FROM reservations 
+                    WHERE date = ? AND time = ? AND email = ? 
+                    AND created_at > datetime('now', '-1 minute')
+                `);
+                
+                const existing = checkStmt.get(date, time, email);
+                if (existing) {
+                    log.info('Duplicate reservation detected:', existing);
+                    return res.status(400).json({
+                        success: false,
+                        message: 'This reservation was just submitted. Please wait a moment before trying again.'
+                    });
+                }
+                
+                // Add the reservation
+                const insertStmt = db.prepare(`
+                    INSERT INTO reservations (date, time, guests, email, name, created_at)
+                    VALUES (?, ?, ?, ?, ?, datetime('now'))
+                `);
+                
+                const result = insertStmt.run(date, time, guests, email, name);
+                log.info('Reservation saved:', result);
                 
                 res.json({
+                    success: true,
                     message: 'Reservation confirmed',
                     id: result.lastInsertRowid
                 });
-            } catch (error) {
-                res.status(500).json({ error: error.message });
+            } catch (err) {
+                log.error('Error saving reservation:', err);
+                res.status(500).json({
+                    success: false,
+                    message: 'Error saving reservation'
+                });
             }
         });
 
         app.get('/api/reservations', (req, res) => {
-            db.all('SELECT * FROM reservations', [], (err, rows) => {
-                if (err) {
-                    return res.status(500).send('Error retrieving reservations');
-                }
+            try {
+                const stmt = db.prepare('SELECT * FROM reservations ORDER BY date, time');
+                const rows = stmt.all();
                 res.json(rows);
-            });
+            } catch (err) {
+                log.error('Error retrieving reservations:', err);
+                res.status(500).json({ error: 'Error retrieving reservations' });
+            }
         });
 
         // GET settings
         app.get('/api/settings', (req, res) => {
-            db.all('SELECT * FROM settings', [], (err, rows) => {
-                if (err) {
-                    console.error('Error fetching settings:', err);
-                    res.status(500).json({ error: err.message });
-                    return;
-                }
-                console.log('Settings:', rows); // Debug log
+            try {
+                const stmt = db.prepare('SELECT * FROM settings');
+                const rows = stmt.all();
+                log.info('Settings:', rows); // Debug log
                 res.json(rows);
-            });
+            } catch (err) {
+                log.error('Error fetching settings:', err);
+                res.status(500).json({ error: err.message });
+            }
         });
 
         // UPDATE settings
         app.post('/api/settings', (req, res) => {
             const settings = req.body;
-            console.log('Received settings update:', settings); // Debug log
+            log.info('Received settings update:', settings);
             
-            const updates = Object.entries(settings).map(([key, value]) => {
-                return new Promise((resolve, reject) => {
-                    console.log(`Updating setting: ${key} = ${value}`); // Debug log
-                    db.run('UPDATE settings SET value = ? WHERE key = ?', [value, key], (err) => {
-                        if (err) {
-                            console.error(`Error updating setting ${key}:`, err); // Debug log
-                            reject(err);
-                        } else {
-                            resolve();
-                        }
-                    });
+            try {
+                const updateStmt = db.prepare('UPDATE settings SET value = ? WHERE key = ?');
+                
+                const updates = Object.entries(settings).map(([key, value]) => {
+                    log.info(`Updating setting: ${key} = ${value}`);
+                    return updateStmt.run(value, key);
                 });
-            });
-
-            Promise.all(updates)
-                .then(() => {
-                    console.log('All settings updated successfully'); // Debug log
-                    res.json({ message: 'Settings updated successfully' });
-                })
-                .catch(err => {
-                    console.error('Settings update failed:', err); // Debug log
-                    res.status(500).json({ error: err.message });
-                });
+                
+                log.info('All settings updated successfully');
+                res.json({ message: 'Settings updated successfully' });
+            } catch (err) {
+                log.error('Settings update failed:', err);
+                res.status(500).json({ error: err.message });
+            }
         });
 
         // Add this new endpoint to check daily capacity
@@ -290,49 +316,6 @@ try {
             } catch (error) {
                 log.error('Error generating available times:', error);
                 res.status(500).json({ error: error.message });
-            }
-        });
-
-        // Add reservation endpoint
-        app.post('/api/reservations', (req, res) => {
-            log.info('Received reservation:', req.body);
-            
-            const { date, time, guests, email, name } = req.body;
-            
-            // Prevent double submission by checking for existing reservation
-            const checkStmt = db.prepare(`
-                SELECT id FROM reservations 
-                WHERE date = ? AND time = ? AND email = ? 
-                AND created_at > datetime('now', '-1 minute')
-            `);
-            
-            const existing = checkStmt.get([date, time, email]);
-            if (existing) {
-                return res.status(400).json({
-                    success: false,
-                    message: 'This reservation was just submitted. Please wait a moment before trying again.'
-                });
-            }
-            
-            // Add created_at timestamp to the reservation
-            const stmt = db.prepare(`
-                INSERT INTO reservations (date, time, guests, email, name, created_at)
-                VALUES (?, ?, ?, ?, ?, datetime('now'))
-            `);
-            
-            try {
-                const info = stmt.run([date, time, guests, email, name]);
-                res.json({
-                    success: true,
-                    message: 'Reservation confirmed',
-                    id: info.lastInsertRowid
-                });
-            } catch (err) {
-                log.error('Error saving reservation:', err);
-                res.status(500).json({
-                    success: false,
-                    message: 'Error saving reservation'
-                });
             }
         });
 

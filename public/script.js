@@ -102,18 +102,22 @@ document.getElementById('reservationForm').addEventListener('submit', async (e) 
     const reservation = Object.fromEntries(formData.entries());
 
     try {
-        const response = await fetch('/api/reservation', {
+        const response = await fetch('/api/reservations', {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
             },
             body: JSON.stringify(reservation)
         });
+        
+        const result = await response.json();
+        
         if (!response.ok) {
-            throw new Error('Network response was not ok');
+            throw new Error(result.message || 'Error making reservation');
         }
-        const result = await response.text();
-        alert(result);
+        
+        // If successful, redirect to success page
+        window.location.href = '/reservation-success.html';
     } catch (error) {
         alert('Error making reservation: ' + error.message);
     }
