@@ -20,13 +20,28 @@ echo "Installing dependencies..."
 npm install
 
 # Update version in package.json
-npm version $VERSION --no-git-tag-version
+# Check if tag exists
+if git rev-parse "v$VERSION" >/dev/null 2>&1; then
+    echo "Warning: Tag v$VERSION already exists. Incrementing patch version..."
+    # Split version into major.minor.patch
+    IFS='.' read -r major minor patch <<< "$VERSION"
+    # Increment patch
+    VERSION="$major.$minor.$((patch + 1))"
+    echo "New version: $VERSION"
+fi
+
+# Force update version in package.json
+npm --no-git-tag-version version $VERSION --force
 
 # Stage changes
 git add .
 
-# Commit
-git commit -m "Release $VERSION
+# Prompt for commit message
+echo "Enter additional commit message (press Enter to skip):"
+read -r COMMIT_MSG
+
+# Base commit message
+BASE_MSG="Release $VERSION
 
 - Customer registration and management system
 - Converted to pure web application
@@ -34,7 +49,19 @@ git commit -m "Release $VERSION
 - Simplified deployment process
 - Improved login UI and navigation"
 
+# Combine messages if additional message provided
+if [ ! -z "$COMMIT_MSG" ]; then
+    FULL_MSG="$BASE_MSG
+
+$COMMIT_MSG"
+else
+    FULL_MSG="$BASE_MSG"
+fi
+
+# Commit
+git commit -m "$FULL_MSG"
+
 # Create tag
-git tag -a "v$VERSION" -m "Version $VERSION"
+git tag -a "v$VERSION" -m "Version $VERSION" --force
 
 echo "Release $VERSION complete!"
