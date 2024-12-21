@@ -1,0 +1,17 @@
+services:
+  - type: web
+    name: rez-coq
+    env: node
+    buildCommand: npm install
+    startCommand: node main.js
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: SMTP_HOST
+        sync: false
+      - key: SMTP_PORT
+        sync: false
+      - key: SMTP_USER
+        sync: false
+      - key: SMTP_APP_PASSWORD
+        sync: false 

@@ -4,14 +4,17 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [1.1.15] - 2024-03-20
+## [1.1.18] - 2024-03-20
 ### Added
 - Customer registration system
 - Customer dashboard with reservation management
 - Role-based access control
 - Improved login UI and navigation
 - Converted to pure web application
-- Removed Electron desktop wrapper
+- Removed Electron dependencies
+- Fixed email confirmation system
+- Added proper email templates
+- Improved error handling for emails
 
 ### Changed
 - Dashboard now requires authentication
@@ -19,6 +22,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Improved security for admin functions
 - Simplified deployment process
 - Streamlined dependencies
+- Updated email configuration
 
 ## [1.1.14] - 2024-03-20
 ### Changed

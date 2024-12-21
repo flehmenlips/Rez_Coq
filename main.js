@@ -1,3 +1,4 @@
+require('dotenv').config();
 const express = require('express');
 const Database = require('better-sqlite3');
 const path = require('path');
@@ -21,7 +22,7 @@ const isProduction = process.env.NODE_ENV === 'production';
 const dbDir = isProduction
     ? path.join(os.homedir(), '.rez_coq', 'db')
     : path.join(__dirname, 'dev_db');
-const dbPath = path.join(dbDir, 'database.sqlite');
+const dbPath = process.env.DATABASE_PATH || path.join(dbDir, 'database.sqlite');
 
 // Log the database path for debugging
 console.log('Environment:', isProduction ? 'production' : 'development');

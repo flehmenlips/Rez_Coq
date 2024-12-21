@@ -1,6 +1,9 @@
 {
   "name": "rez_coq",
   "version": "1.1.18",
+  "engines": {
+    "node": ">=18.0.0"
+  },
   "description": "Restaurant Reservation System for Le Coq d'Or",
   "author": "George Page",
   "license": "MIT",
@@ -11,11 +14,12 @@
     "test": "echo \"Warning: No tests implemented yet\""
   },
   "dependencies": {
+    "bcrypt": "^5.1.1",
     "better-sqlite3": "^8.0.1",
+    "cookie-parser": "^1.4.6",
+    "dotenv": "^16.4.7",
     "express": "^4.18.2",
     "express-session": "^1.17.3",
-    "bcrypt": "^5.1.1",
-    "cookie-parser": "^1.4.6",
     "nodemailer": "^6.9.7"
   },
   "devDependencies": {

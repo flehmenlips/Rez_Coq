@@ -10,7 +10,7 @@ const transporter = nodemailer.createTransport({
     secure: false, // true for 465, false for other ports
     auth: {
         user: process.env.SMTP_USER,
-        pass: process.env.SMTP_PASS
+        pass: process.env.SMTP_APP_PASSWORD
     }
 });
 
@@ -67,7 +67,10 @@ async function sendEmail(to, template, data) {
         const emailContent = emailTemplates[template](data);
         
         const info = await transporter.sendMail({
-            from: `"Le Coq d'Or" <${process.env.SMTP_USER}>`,
+            from: {
+                name: 'Coq au Vin',
+                address: process.env.SMTP_USER
+            },
             to: to,
             subject: emailContent.subject,
             text: emailContent.text,
