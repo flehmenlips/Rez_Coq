@@ -20,7 +20,7 @@ console.log('Node environment:', process.env.NODE_ENV);
 // Database setup
 const isProduction = process.env.NODE_ENV === 'production';
 const dbDir = isProduction
-    ? path.join('/data', 'rez_coq', 'db')
+    ? path.join(process.env.HOME || '/tmp', '.rez_coq', 'db')
     : path.join(__dirname, 'dev_db');
 const dbPath = process.env.DATABASE_PATH || path.join(dbDir, 'database.sqlite');
 
