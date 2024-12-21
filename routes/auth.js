@@ -7,58 +7,50 @@ module.exports = (db) => {
     
     // Login route
     router.post('/login', async (req, res) => {
-        console.log('Login attempt:', {
-            hasUsername: !!req.body.username,
-            hasPassword: !!req.body.password,
-            body: req.body,
-            headers: req.headers
-        });
-
         try {
             const { username, password } = req.body;
             
             // Query user
             const user = db.prepare('SELECT * FROM users WHERE username = ?').get(username);
-            console.log('Database query result:', {
+            
+            console.log('Login attempt details:', {
+                usernameProvided: !!username,
                 userFound: !!user,
-                userData: user ? { id: user.id, username: user.username, hasDefaultPassword: user.password_hash === 'CHANGE_ME_ON_FIRST_LOGIN' } : null
+                sessionExists: !!req.session
             });
 
             if (!user) {
                 return res.status(401).json({ success: false, message: 'Invalid credentials' });
             }
 
-            // Check for default password
-            if (user.password_hash === 'CHANGE_ME_ON_FIRST_LOGIN' && password === 'CHANGE_ME_ON_FIRST_LOGIN') {
-                req.session.user = { id: user.id, username: user.username, role: user.role };
-                return res.json({ 
-                    success: true, 
-                    message: 'Please change your password',
-                    requirePasswordChange: true,
-                    role: user.role
-                });
-            }
-
-            console.log('Verifying password');
             // Verify password
             const match = await bcrypt.compare(password, user.password_hash);
+            console.log('Password verification:', { match });
+
             if (!match) {
                 return res.status(401).json({ success: false, message: 'Invalid credentials' });
             }
 
-            // Update last login
-            db.prepare('UPDATE users SET last_login = datetime("now") WHERE id = ?').run(user.id);
-
             // Set session
-            req.session.user = { id: user.id, username: user.username, role: user.role };
-            
+            req.session.user = { 
+                id: user.id, 
+                username: user.username, 
+                role: user.role 
+            };
+            console.log('Session set:', req.session);
+
             res.json({ 
                 success: true, 
                 message: 'Login successful',
                 role: user.role
             });
         } catch (error) {
-            console.error('Login error:', error);
+            console.error('Login error:', {
+                error: error.message,
+                stack: error.stack,
+                session: req.session,
+                username: req.body.username
+            });
             res.status(500).json({ success: false, message: 'Server error' });
         }
     });

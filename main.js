@@ -371,6 +371,13 @@ try {
         console.log(`Database: ${path.resolve(dbPath)}`);
         console.log(`Static Files: ${path.resolve(__dirname, 'public')}`);
         console.log('=========================\n');
+    }).on('error', (error) => {
+        if (error.code === 'EADDRINUSE') {
+            console.error(`Port ${PORT} is already in use. Please try another port or kill the existing process.`);
+            process.exit(1);
+        } else {
+            console.error('Server error:', error);
+        }
     });
 
     // Increase timeouts
