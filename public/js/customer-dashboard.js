@@ -18,15 +18,30 @@ document.getElementById('logoutBtn').addEventListener('click', async () => {
 async function loadReservations() {
     try {
         const response = await fetch('/api/reservations/my-reservations');
+        if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+        }
         const reservations = await response.json();
+        console.log('Loaded reservations:', reservations);
         
         const tbody = document.getElementById('reservationsList');
         tbody.innerHTML = '';
         
+        if (reservations.length === 0) {
+            tbody.innerHTML = `
+                <tr>
+                    <td colspan="5" class="text-center">
+                        No reservations found
+                    </td>
+                </tr>
+            `;
+            return;
+        }
+        
         reservations.forEach(reservation => {
             const row = document.createElement('tr');
             row.innerHTML = `
-                <td>${reservation.date}</td>
+                <td>${new Date(reservation.date).toLocaleDateString()}</td>
                 <td>${reservation.time}</td>
                 <td>${reservation.guests}</td>
                 <td>${reservation.email_status}</td>
@@ -41,6 +56,13 @@ async function loadReservations() {
         });
     } catch (error) {
         console.error('Error loading reservations:', error);
+        document.getElementById('reservationsList').innerHTML = `
+            <tr>
+                <td colspan="5" class="text-center text-danger">
+                    Error loading reservations: ${error.message}
+                </td>
+            </tr>
+        `;
     }
 }
 

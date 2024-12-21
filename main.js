@@ -254,11 +254,15 @@ try {
         try {
             const rows = db.prepare(`
                 SELECT * FROM reservations 
-                WHERE email = (SELECT email FROM users WHERE id = ?)
+                WHERE email = ?
                 ORDER BY date, time
-            `).all(req.session.user.id);
+            `).all(req.session.user.username);
             res.json(rows);
         } catch (err) {
+            console.error('Reservation fetch error:', err, {
+                userId: req.session.user.id,
+                userEmail: req.session.user.username
+            });
             res.status(500).json({ error: 'Error retrieving reservations' });
         }
     });
