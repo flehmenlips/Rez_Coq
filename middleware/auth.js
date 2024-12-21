@@ -1,12 +1,16 @@
-const auth = (req, res, next) => {
-    // Check if user is logged in
-    if (!req.session?.user?.id) {
-        if (req.xhr) {
-            return res.status(401).json({ error: 'Unauthorized' });
+// Authentication middleware
+function auth(req, res, next) {
+    // Check if user is authenticated
+    if (!req.session?.user) {
+        if (req.xhr || req.path.startsWith('/api/')) {
+            return res.status(401).json({
+                success: false,
+                message: 'Authentication required'
+            });
         }
         return res.redirect('/login');
     }
     next();
-};
+}
 
 module.exports = auth; 
