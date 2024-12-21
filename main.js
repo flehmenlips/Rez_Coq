@@ -13,6 +13,7 @@ const cookieParser = require('cookie-parser');
 const auth = require('./middleware/auth');
 const authRoutes = require('./routes/auth');
 const SQLiteStore = require('connect-sqlite3')(session);
+const bcrypt = require('bcrypt');
 let db; // Global database connection
 
 // Add startup logging
@@ -87,11 +88,32 @@ try {
     
     // Create default admin if none exists
     const hasAdmin = db.prepare('SELECT id FROM users WHERE role = ?').get('admin');
-    if (!hasAdmin) {
-        db.prepare(`
-            INSERT INTO users (username, password_hash, role, email, verified)
-            VALUES (?, ?, ?, ?, ?)
-        `).run('admin', 'CHANGE_ME_ON_FIRST_LOGIN', 'admin', 'admin@rezcoq.com', 1);
+    console.log('Checking for admin account:', {
+        hasAdmin: !!hasAdmin,
+        hasEnvVars: {
+            email: !!process.env.ADMIN_EMAIL,
+            password: !!process.env.ADMIN_PASSWORD
+        }
+    });
+    
+    if (!hasAdmin && process.env.ADMIN_EMAIL && process.env.ADMIN_PASSWORD) {
+        console.log('Creating default admin account...');
+        const saltRounds = 10;
+        const passwordHash = await bcrypt.hash(process.env.ADMIN_PASSWORD, saltRounds);
+        
+        try {
+            db.prepare(`
+                INSERT INTO users (username, password_hash, email, role, verified)
+                VALUES (?, ?, ?, 'admin', 1)
+            `).run(
+                process.env.ADMIN_EMAIL,  // Use email as username
+                passwordHash,
+                process.env.ADMIN_EMAIL
+            );
+            console.log('Admin account created successfully');
+        } catch (error) {
+            console.error('Failed to create admin:', error);
+        }
     }
     
     // Middleware setup
