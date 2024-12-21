@@ -1,45 +1,33 @@
-document.getElementById('passwordForm').addEventListener('submit', async (e) => {
-    e.preventDefault();
-    const form = e.target;
-    
-    if (form.newPassword.value !== form.confirmPassword.value) {
-        showMessage('New passwords do not match', 'danger');
-        return;
-    }
-    
+async function loadAccountDetails() {
     try {
-        const response = await fetch('/api/auth/change-password', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-                currentPassword: form.currentPassword.value,
-                newPassword: form.newPassword.value
-            })
-        });
+        const response = await fetch('/api/auth/account');
+        const data = await response.json();
         
-        const result = await response.json();
-        
-        if (result.success) {
-            showMessage('Password updated successfully', 'success');
-            form.reset();
-            setTimeout(() => {
-                window.location.href = '/dashboard';
-            }, 2000);
+        if (data.success) {
+            const user = data.user;
+            document.getElementById('accountDetails').innerHTML = `
+                <div class="mb-3">
+                    <strong>Username:</strong> ${user.username}
+                </div>
+                <div class="mb-3">
+                    <strong>Email:</strong> ${user.email}
+                </div>
+                <div class="mb-3">
+                    <strong>Account Type:</strong> ${user.role}
+                </div>
+                <div class="mb-3">
+                    <strong>Member Since:</strong> ${new Date(user.created_at).toLocaleDateString()}
+                </div>
+            `;
         } else {
-            showMessage(result.message || 'Failed to update password', 'danger');
+            document.getElementById('accountDetails').innerHTML = 
+                '<div class="alert alert-danger">Failed to load account details</div>';
         }
     } catch (error) {
-        showMessage('Error updating password', 'danger');
+        console.error('Error loading account details:', error);
+        document.getElementById('accountDetails').innerHTML = 
+            '<div class="alert alert-danger">Error loading account details</div>';
     }
-});
+}
 
-function showMessage(message, type) {
-    const messageDiv = document.getElementById('message');
-    messageDiv.textContent = message;
-    messageDiv.className = `alert alert-${type}`;
-    messageDiv.style.display = 'block';
-    
-    setTimeout(() => {
-        messageDiv.style.display = 'none';
-    }, 3000);
-} 
+document.addEventListener('DOMContentLoaded', loadAccountDetails); 

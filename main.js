@@ -360,6 +360,11 @@ try {
         res.sendFile(path.join(__dirname, 'public', 'customer-dashboard.html'));
     });
 
+    // Add user settings route
+    app.get('/user-settings', auth, (req, res) => {
+        res.sendFile(path.join(__dirname, 'public', 'user-settings.html'));
+    });
+
     // Serve static files LAST
     app.use(express.static(path.join(__dirname, 'public')));
 
