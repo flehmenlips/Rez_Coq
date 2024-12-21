@@ -15,6 +15,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Fixed email confirmation system
 - Added proper email templates
 - Improved error handling for emails
+- Deployed to production on Render.com
+- Protected all reservation endpoints
+- Improved authentication flow
 
 ### Changed
 - Dashboard now requires authentication
@@ -23,6 +26,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Simplified deployment process
 - Streamlined dependencies
 - Updated email configuration
+- Fixed Node.js compatibility issues
+- Changed entry point to login page
+- Required authentication for all reservation actions
 
 ## [1.1.14] - 2024-03-20
 ### Changed

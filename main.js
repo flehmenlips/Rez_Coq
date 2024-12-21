@@ -20,7 +20,7 @@ console.log('Node environment:', process.env.NODE_ENV);
 // Database setup
 const isProduction = process.env.NODE_ENV === 'production';
 const dbDir = isProduction
-    ? path.join(os.homedir(), '.rez_coq', 'db')
+    ? path.join('/data', 'rez_coq', 'db')
     : path.join(__dirname, 'dev_db');
 const dbPath = process.env.DATABASE_PATH || path.join(dbDir, 'database.sqlite');
 
@@ -115,7 +115,7 @@ try {
     app.use('/api/auth', authRoutes(db));
 
     // API Routes
-    app.post('/api/reservations', async (req, res) => {
+    app.post('/api/reservations', auth, async (req, res) => {
         const { date, time, guests, email, name } = req.body;
         try {
             // Check capacity
@@ -227,7 +227,7 @@ try {
     });
 
     // Get available times
-    app.get('/api/available-times', (req, res) => {
+    app.get('/api/available-times', auth, (req, res) => {
         const date = req.query.date;
         try {
             const settings = db.prepare('SELECT * FROM settings').all()
@@ -280,6 +280,13 @@ try {
     });
 
     // Route handlers
+    app.get('/', (req, res) => {
+        if (!req.session?.user) {
+            return res.redirect('/login');
+        }
+        res.sendFile(path.join(__dirname, 'public', 'index.html'));
+    });
+
     app.get('/login', (req, res) => {
         if (req.session?.user) {
             return res.redirect('/dashboard');
