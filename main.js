@@ -138,7 +138,9 @@ try {
             secure: isProduction,
             httpOnly: true,
             maxAge: 24 * 60 * 60 * 1000,
-            sameSite: 'lax'
+            sameSite: 'lax',
+            path: '/',
+            expires: 0
         },
         proxy: true
     }));
@@ -365,12 +367,28 @@ try {
 
     app.post('/api/settings', auth, (req, res) => {
         try {
+            // Verify admin role
+            if (req.session.user.role !== 'admin') {
+                return res.status(403).json({ error: 'Admin access required' });
+            }
+
+            console.log('Updating settings:', req.body);
             const updateStmt = db.prepare('UPDATE settings SET value = ? WHERE key = ?');
             Object.entries(req.body).forEach(([key, value]) => {
                 updateStmt.run(value, key);
             });
-            res.json({ message: 'Settings updated successfully' });
+            
+            // Verify updates
+            const updatedSettings = db.prepare('SELECT * FROM settings').all();
+            console.log('Settings updated:', updatedSettings);
+
+            res.json({ 
+                success: true,
+                message: 'Settings updated successfully',
+                settings: updatedSettings
+            });
         } catch (err) {
+            console.error('Settings update error:', err);
             res.status(500).json({ error: err.message });
         }
     });
