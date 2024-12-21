@@ -121,6 +121,17 @@ try {
         next();
     });
 
+    // Set proper MIME types
+    app.use(express.static(path.join(__dirname, 'public'), {
+        setHeaders: (res, path) => {
+            if (path.endsWith('.js')) {
+                res.setHeader('Content-Type', 'application/javascript');
+            } else if (path.endsWith('.css')) {
+                res.setHeader('Content-Type', 'text/css');
+            }
+        }
+    }));
+
     // Trust proxy - needed for secure cookies behind Render's proxy
     app.set('trust proxy', 1);
 
