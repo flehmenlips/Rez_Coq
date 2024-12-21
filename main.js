@@ -111,6 +111,20 @@ try {
         proxy: true
     }));
 
+    // Trust proxy - needed for secure cookies behind Render's proxy
+    app.set('trust proxy', 1);
+
+    // Auth routes must come before static files
+    app.use('/api/auth', authRoutes(db));
+
+    // Root route - must be first
+    app.get('/', (req, res) => {
+        if (!req.session?.user) {
+            return res.redirect('/login');
+        }
+        res.sendFile(path.join(__dirname, 'public', 'index.html'));
+    });
+
     // Add security headers
     app.use((req, res, next) => {
         res.set({
@@ -121,30 +135,16 @@ try {
         next();
     });
 
-    // Set proper MIME types
+    // Set proper MIME types for static files
     app.use(express.static(path.join(__dirname, 'public'), {
-        setHeaders: (res, path) => {
-            if (path.endsWith('.js')) {
+        setHeaders: (res, filePath) => {
+            if (filePath.endsWith('.js')) {
                 res.setHeader('Content-Type', 'application/javascript');
-            } else if (path.endsWith('.css')) {
+            } else if (filePath.endsWith('.css')) {
                 res.setHeader('Content-Type', 'text/css');
             }
         }
     }));
-
-    // Trust proxy - needed for secure cookies behind Render's proxy
-    app.set('trust proxy', 1);
-
-    // Auth routes
-    app.use('/api/auth', authRoutes(db));
-
-    // Root route - must be first
-    app.get('/', (req, res) => {
-        if (!req.session?.user) {
-            return res.redirect('/login');
-        }
-        res.sendFile(path.join(__dirname, 'public', 'index.html'));
-    });
 
     // Login and Register routes (no auth required)
     app.get('/login', (req, res) => {
