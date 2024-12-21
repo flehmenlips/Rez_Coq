@@ -4,6 +4,27 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.2.0] - 2024-03-21
+### Added
+- Successfully deployed to production
+- Complete authentication system
+- Session management
+- Email confirmation system
+- Improved dashboard styling
+- Fixed production deployment issues
+- Added proper session handling
+- Fixed authentication flows
+- Added secure login/register system
+- Improved error handling and logging
+
+### Changed
+- Entry point now redirects to login
+- Enhanced security headers
+- Improved server configuration
+- Updated database handling
+- Fixed MIME type issues
+- Improved session store configuration
+
 ## [1.1.18] - 2024-03-20
 ### Added
 - Customer registration system
