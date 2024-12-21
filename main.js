@@ -12,6 +12,7 @@ const session = require('express-session');
 const cookieParser = require('cookie-parser');
 const auth = require('./middleware/auth');
 const authRoutes = require('./routes/auth');
+const SQLiteStore = require('connect-sqlite3')(session);
 let db; // Global database connection
 
 // Add startup logging
@@ -102,6 +103,11 @@ try {
         resave: false,
         saveUninitialized: false,
         name: 'rez_coq_session',
+        store: new SQLiteStore({
+            db: 'sessions.db',
+            dir: dbDir,
+            concurrentDB: true
+        }),
         cookie: {
             secure: isProduction,
             httpOnly: true,
@@ -358,11 +364,19 @@ try {
     // Start server with proper configuration
     const server = app.listen(PORT, HOST, () => {
         console.log(`Server is running on ${HOST}:${PORT}`);
+        console.log('Environment:', process.env.NODE_ENV);
+        console.log('Database path:', dbPath);
+        console.log('Static files path:', path.join(__dirname, 'public'));
     });
 
     // Increase timeouts
     server.keepAliveTimeout = 120000;  // 120 seconds
     server.headersTimeout = 120000;    // 120 seconds
+
+    // Add error handling
+    server.on('error', (error) => {
+        console.error('Server error:', error);
+    });
 
     // Graceful shutdown
     process.on('SIGTERM', () => {
