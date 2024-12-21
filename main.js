@@ -5,7 +5,8 @@ const path = require('path');
 const fs = require('fs');
 const os = require('os');
 const app = express();
-const PORT = process.env.PORT || 3000;
+const PORT = process.env.PORT || 10000;
+const HOST = '0.0.0.0';
 const { sendEmail } = require('./utils/email');
 const session = require('express-session');
 const cookieParser = require('cookie-parser');
@@ -351,9 +352,22 @@ try {
     // Serve static files LAST
     app.use(express.static(path.join(__dirname, 'public')));
 
-    // Start server
-    app.listen(PORT, () => {
-        console.log(`Server is running on port ${PORT}`);
+    // Start server with proper configuration
+    const server = app.listen(PORT, HOST, () => {
+        console.log(`Server is running on ${HOST}:${PORT}`);
+    });
+
+    // Increase timeouts
+    server.keepAliveTimeout = 120000;  // 120 seconds
+    server.headersTimeout = 120000;    // 120 seconds
+
+    // Graceful shutdown
+    process.on('SIGTERM', () => {
+        console.log('SIGTERM received. Performing graceful shutdown...');
+        server.close(() => {
+            console.log('Server closed');
+            process.exit(0);
+        });
     });
 
 } catch (error) {
