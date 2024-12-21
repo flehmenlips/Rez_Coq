@@ -25,6 +25,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Fixed MIME type issues
 - Improved session store configuration
 
+## [1.2.1] - 2024-03-21
+### Fixed
+- Authentication system stable in production
+- Session management working properly
+- Database connections reliable
+- Email system configured and tested
+- Security headers properly set
+
+### Added
+- Production status monitoring
+- Deployment documentation
+- System health checks
+- Better error logging
+
 ## [1.1.18] - 2024-03-20
 ### Added
 - Customer registration system
