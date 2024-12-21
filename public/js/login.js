@@ -29,17 +29,21 @@ document.getElementById('loginForm').addEventListener('submit', async (e) => {
     try {
         const response = await fetch('/api/auth/login', {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            credentials: 'same-origin',
             body: JSON.stringify({
                 username: form.username.value,
-                password: form.password.value,
-                type: currentLoginType
+                password: form.password.value
             })
         });
         
         const result = await response.json();
         
         if (result.success) {
+            await new Promise(resolve => setTimeout(resolve, 100));
+            
             if (result.role === 'admin') {
                 window.location.href = '/dashboard';
             } else {
