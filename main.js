@@ -108,11 +108,37 @@ try {
         }
     }));
 
-    // Serve static files
+    // Serve static files AFTER routes
     app.use(express.static(path.join(__dirname, 'public')));
 
     // Auth routes
     app.use('/api/auth', authRoutes(db));
+
+    // Login and Register routes (no auth required)
+    app.get('/login', (req, res) => {
+        if (req.session?.user) {
+            return res.redirect('/dashboard');
+        }
+        res.sendFile(path.join(__dirname, 'public', 'login.html'));
+    });
+
+    app.get('/register', (req, res) => {
+        if (req.session?.user) {
+            return res.redirect('/dashboard');
+        }
+        res.sendFile(path.join(__dirname, 'public', 'register.html'));
+    });
+
+    // Protected routes
+    app.use(auth);  // Apply auth middleware to all routes below this
+
+    // Route handlers
+    app.get('/', (req, res) => {
+        if (!req.session?.user) {
+            return res.redirect('/login');
+        }
+        res.sendFile(path.join(__dirname, 'public', 'index.html'));
+    });
 
     // API Routes
     app.post('/api/reservations', auth, async (req, res) => {
@@ -280,27 +306,6 @@ try {
     });
 
     // Route handlers
-    app.get('/', (req, res) => {
-        if (!req.session?.user) {
-            return res.redirect('/login');
-        }
-        res.sendFile(path.join(__dirname, 'public', 'index.html'));
-    });
-
-    app.get('/login', (req, res) => {
-        if (req.session?.user) {
-            return res.redirect('/dashboard');
-        }
-        res.sendFile(path.join(__dirname, 'public', 'login.html'));
-    });
-
-    app.get('/register', (req, res) => {
-        if (req.session?.user) {
-            return res.redirect('/dashboard');
-        }
-        res.sendFile(path.join(__dirname, 'public', 'register.html'));
-    });
-
     app.get('/dashboard', auth, (req, res) => {
         if (req.session.user.role !== 'admin') {
             return res.redirect('/customer-dashboard');
