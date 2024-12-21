@@ -18,6 +18,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Deployed to production on Render.com
 - Protected all reservation endpoints
 - Improved authentication flow
+- Fixed production deployment issues
+- Added proper session handling
+- Improved security headers
+- Fixed routing and authentication flow
 
 ### Changed
 - Dashboard now requires authentication
@@ -29,6 +33,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Fixed Node.js compatibility issues
 - Changed entry point to login page
 - Required authentication for all reservation actions
+- Improved login page styling
+- Enhanced server configuration for production
 
 ## [1.1.14] - 2024-03-20
 ### Changed

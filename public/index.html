@@ -234,6 +234,22 @@
             console.error('Error fetching times:', error);
         }
     });
+
+    // Check auth status on page load
+    async function checkAuth() {
+        try {
+            const response = await fetch('/api/auth/check-session');
+            const result = await response.json();
+            if (!result.authenticated) {
+                window.location.href = '/login';
+            }
+        } catch (error) {
+            console.error('Auth check failed:', error);
+            window.location.href = '/login';
+        }
+    }
+    
+    document.addEventListener('DOMContentLoaded', checkAuth);
     </script>
 
     <!-- Error Modal -->

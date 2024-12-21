@@ -246,27 +246,52 @@
     max-width: 400px;
     margin: 50px auto;
     padding: 20px;
+    background: white;
     border: 1px solid #ddd;
     border-radius: 5px;
     box-shadow: 0 2px 4px rgba(0,0,0,0.1);
 }
 
+.welcome-section {
+    text-align: center;
+    margin-bottom: 2rem;
+    padding: 1rem;
+}
+
+.welcome-section h1 {
+    color: #333;
+    margin-bottom: 1rem;
+    font-size: 2rem;
+}
+
+.welcome-text {
+    color: #666;
+    font-size: 1.1em;
+    margin-bottom: 1.5rem;
+}
+
 .login-form {
-    display: flex;
-    flex-direction: column;
-    gap: 15px;
+    margin-top: 2rem;
+    padding: 0 1rem;
 }
 
 .form-group {
-    display: flex;
-    flex-direction: column;
-    gap: 5px;
+    margin-bottom: 1.5rem;
+}
+
+.form-group label {
+    display: block;
+    margin-bottom: 0.5rem;
+    color: #333;
+    font-weight: 500;
 }
 
 .form-group input {
-    padding: 8px;
+    width: 100%;
+    padding: 0.75rem;
     border: 1px solid #ddd;
     border-radius: 4px;
+    font-size: 1rem;
 }
 
 .alert {
