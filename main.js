@@ -87,34 +87,38 @@ try {
     `).run();
     
     // Create default admin if none exists
-    const hasAdmin = db.prepare('SELECT id FROM users WHERE role = ?').get('admin');
-    console.log('Checking for admin account:', {
-        hasAdmin: !!hasAdmin,
-        hasEnvVars: {
-            email: !!process.env.ADMIN_EMAIL,
-            password: !!process.env.ADMIN_PASSWORD
-        }
-    });
-    
-    if (!hasAdmin && process.env.ADMIN_EMAIL && process.env.ADMIN_PASSWORD) {
-        console.log('Creating default admin account...');
-        const saltRounds = 10;
-        const passwordHash = await bcrypt.hash(process.env.ADMIN_PASSWORD, saltRounds);
+    async function createAdminIfNeeded() {
+        const hasAdmin = db.prepare('SELECT id FROM users WHERE role = ?').get('admin');
+        console.log('Checking for admin account:', {
+            hasAdmin: !!hasAdmin,
+            hasEnvVars: {
+                email: !!process.env.ADMIN_EMAIL,
+                password: !!process.env.ADMIN_PASSWORD
+            }
+        });
         
-        try {
-            db.prepare(`
-                INSERT INTO users (username, password_hash, email, role, verified)
-                VALUES (?, ?, ?, 'admin', 1)
-            `).run(
-                process.env.ADMIN_EMAIL,  // Use email as username
-                passwordHash,
-                process.env.ADMIN_EMAIL
-            );
-            console.log('Admin account created successfully');
-        } catch (error) {
-            console.error('Failed to create admin:', error);
+        if (!hasAdmin && process.env.ADMIN_EMAIL && process.env.ADMIN_PASSWORD) {
+            console.log('Creating default admin account...');
+            const saltRounds = 10;
+            try {
+                const passwordHash = await bcrypt.hash(process.env.ADMIN_PASSWORD, saltRounds);
+                db.prepare(`
+                    INSERT INTO users (username, password_hash, email, role, verified)
+                    VALUES (?, ?, ?, 'admin', 1)
+                `).run(
+                    process.env.ADMIN_EMAIL,  // Use email as username
+                    passwordHash,
+                    process.env.ADMIN_EMAIL
+                );
+                console.log('Admin account created successfully');
+            } catch (error) {
+                console.error('Failed to create admin:', error);
+            }
         }
     }
+    
+    // Call the async function
+    createAdminIfNeeded().catch(console.error);
     
     // Middleware setup
     app.use(express.json());
