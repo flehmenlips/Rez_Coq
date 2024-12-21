@@ -23,6 +23,16 @@
             width: 100%;
             max-width: 400px;
         }
+        .login-type-selector {
+            margin-bottom: 2rem;
+            text-align: center;
+        }
+        .login-type-selector .btn-group {
+            width: 100%;
+        }
+        .login-type-selector .btn {
+            width: 50%;
+        }
     </style>
 </head>
 <body>
@@ -33,6 +43,14 @@
                 Login or create an account to manage your reservations.
             </p>
         </div>
+
+        <div class="login-type-selector">
+            <div class="btn-group" role="group">
+                <button type="button" class="btn btn-outline-primary active" data-type="customer">Customer</button>
+                <button type="button" class="btn btn-outline-primary" data-type="admin">Admin</button>
+            </div>
+        </div>
+
         <form id="loginForm" class="login-form">
             <div class="form-group">
                 <label for="username">Username</label>
@@ -42,13 +60,20 @@
                 <label for="password">Password</label>
                 <input type="password" id="password" name="password" required>
             </div>
-            <button type="submit" class="btn btn-primary">Login</button>
+            <button type="submit" class="btn btn-primary w-100">Login</button>
         </form>
-        <div class="auth-links">
+
+        <div id="customerLinks" class="auth-links">
             <p>Don't have an account? <a href="/register">Sign up here</a></p>
         </div>
+
+        <div id="adminLinks" class="auth-links" style="display: none;">
+            <p class="text-muted">Admin access only</p>
+        </div>
+
         <div id="loginMessage" class="alert" style="display: none;"></div>
     </div>
+
     <script src="js/login.js"></script>
 </body>
 </html> 

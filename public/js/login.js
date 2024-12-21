@@ -1,3 +1,25 @@
+let currentLoginType = 'customer';
+
+// Handle login type selection
+document.querySelectorAll('.login-type-selector .btn').forEach(button => {
+    button.addEventListener('click', (e) => {
+        // Update buttons
+        document.querySelectorAll('.login-type-selector .btn').forEach(btn => {
+            btn.classList.remove('active');
+        });
+        e.target.classList.add('active');
+
+        // Update login type
+        currentLoginType = e.target.dataset.type;
+
+        // Show/hide appropriate links
+        document.getElementById('customerLinks').style.display = 
+            currentLoginType === 'customer' ? 'block' : 'none';
+        document.getElementById('adminLinks').style.display = 
+            currentLoginType === 'admin' ? 'block' : 'none';
+    });
+});
+
 document.getElementById('loginForm').addEventListener('submit', async (e) => {
     e.preventDefault();
     const form = e.target;
@@ -10,7 +32,8 @@ document.getElementById('loginForm').addEventListener('submit', async (e) => {
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
                 username: form.username.value,
-                password: form.password.value
+                password: form.password.value,
+                type: currentLoginType
             })
         });
         
