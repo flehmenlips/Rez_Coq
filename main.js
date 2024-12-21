@@ -103,10 +103,10 @@ try {
         saveUninitialized: false,
         name: 'rez_coq_session',
         cookie: {
-            secure: true,
+            secure: isProduction,
             httpOnly: true,
-            maxAge: 24 * 60 * 60 * 1000, // 24 hours
-            sameSite: 'strict'
+            maxAge: 24 * 60 * 60 * 1000,
+            sameSite: 'lax'
         },
         proxy: true
     }));
@@ -121,16 +121,8 @@ try {
         next();
     });
 
-    // Force HTTPS in production
-    if (isProduction) {
-        app.use((req, res, next) => {
-            if (req.secure) {
-                next();
-            } else {
-                res.redirect('https://' + req.headers.host + req.url);
-            }
-        });
-    }
+    // Trust proxy - needed for secure cookies behind Render's proxy
+    app.set('trust proxy', 1);
 
     // Auth routes
     app.use('/api/auth', authRoutes(db));
