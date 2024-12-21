@@ -1,149 +1,74 @@
 const express = require('express');
-const router = express.Router();
 const bcrypt = require('bcrypt');
+const router = express.Router();
 
 module.exports = (db) => {
-    // Verify database connection at router initialization
-    try {
-        const dbCheck = db.prepare('SELECT 1').get();
-        console.log('Auth router: Database connection verified');
-    } catch (error) {
-        console.error('Auth router: Database connection failed:', error);
-        throw error;
-    }
-
+    console.log('Auth router: Database connection verified');
+    
     // Login route
     router.post('/login', async (req, res) => {
-        const { username, password } = req.body;
-        
+        console.log('Login attempt:', {
+            hasUsername: !!req.body.username,
+            hasPassword: !!req.body.password,
+            body: req.body,
+            headers: req.headers
+        });
+
         try {
-            console.log('Login attempt:', {
-                hasUsername: !!username,
-                hasPassword: !!password,
-                body: req.body,
-                headers: req.headers
-            });
+            const { username, password } = req.body;
+            
+            // Query user
             const user = db.prepare('SELECT * FROM users WHERE username = ?').get(username);
-            
-            console.log('Database query result:', { 
+            console.log('Database query result:', {
                 userFound: !!user,
-                userData: user ? {
-                    id: user.id,
-                    username: user.username,
-                    hasDefaultPassword: user.password_hash === 'CHANGE_ME_ON_FIRST_LOGIN'
-                } : null
+                userData: user ? { id: user.id, username: user.username, hasDefaultPassword: user.password_hash === 'CHANGE_ME_ON_FIRST_LOGIN' } : null
             });
-            
+
             if (!user) {
-                return res.status(401).json({
-                    success: false,
-                    message: 'Invalid credentials'
+                return res.status(401).json({ success: false, message: 'Invalid credentials' });
+            }
+
+            // Check for default password
+            if (user.password_hash === 'CHANGE_ME_ON_FIRST_LOGIN' && password === 'CHANGE_ME_ON_FIRST_LOGIN') {
+                req.session.user = { id: user.id, username: user.username, role: user.role };
+                return res.json({ 
+                    success: true, 
+                    message: 'Please change your password',
+                    requirePasswordChange: true,
+                    role: user.role
                 });
             }
-            
-            try {
-                if (user.password_hash === 'CHANGE_ME_ON_FIRST_LOGIN') {
-                    console.log('First login detected, updating password');
-                    const hashedPassword = await bcrypt.hash(password, 10);
-                    db.prepare('UPDATE users SET password_hash = ? WHERE id = ?')
-                        .run(hashedPassword, user.id);
-                } else {
-                    console.log('Verifying password');
-                    const validPassword = await bcrypt.compare(password, user.password_hash);
-                    if (!validPassword) {
-                        return res.status(401).json({
-                            success: false,
-                            message: 'Invalid credentials'
-                        });
-                    }
-                }
-            } catch (bcryptError) {
-                console.error('Bcrypt error:', bcryptError);
-                throw bcryptError;
+
+            console.log('Verifying password');
+            // Verify password
+            const match = await bcrypt.compare(password, user.password_hash);
+            if (!match) {
+                return res.status(401).json({ success: false, message: 'Invalid credentials' });
             }
-            
+
             // Update last login
-            db.prepare('UPDATE users SET last_login = CURRENT_TIMESTAMP WHERE id = ?')
-                .run(user.id);
-            
+            db.prepare('UPDATE users SET last_login = datetime("now") WHERE id = ?').run(user.id);
+
             // Set session
-            req.session.user = {
-                id: user.id,
-                username: user.username,
-                role: user.role
-            };
+            req.session.user = { id: user.id, username: user.username, role: user.role };
             
-            res.json({
-                success: true,
+            res.json({ 
+                success: true, 
                 message: 'Login successful',
                 role: user.role
             });
-            
         } catch (error) {
             console.error('Login error:', error);
-            res.status(500).json({
-                success: false,
-                message: 'Internal server error'
-            });
+            res.status(500).json({ success: false, message: 'Server error' });
         }
     });
-    
-    // Logout route
-    router.post('/logout', (req, res) => {
-        req.session.destroy();
-        res.json({
-            success: true,
-            message: 'Logged out successfully'
-        });
-    });
-    
-    // Add this inside the module.exports function
-    router.get('/check-session', (req, res) => {
-        res.json({
-            authenticated: !!req.session.user,
-            user: req.session.user || null
-        });
-    });
-    
-    // Add this inside the module.exports function
-    router.post('/change-password', async (req, res) => {
-        const { currentPassword, newPassword } = req.body;
-        
-        try {
-            const user = db.prepare('SELECT * FROM users WHERE id = ?').get(req.session.user.id);
-            
-            const validPassword = await bcrypt.compare(currentPassword, user.password_hash);
-            if (!validPassword) {
-                return res.status(401).json({
-                    success: false,
-                    message: 'Current password is incorrect'
-                });
-            }
-            
-            const hashedPassword = await bcrypt.hash(newPassword, 10);
-            db.prepare('UPDATE users SET password_hash = ? WHERE id = ?')
-                .run(hashedPassword, user.id);
-            
-            res.json({
-                success: true,
-                message: 'Password updated successfully'
-            });
-            
-        } catch (error) {
-            console.error('Password change error:', error);
-            res.status(500).json({
-                success: false,
-                message: 'Internal server error'
-            });
-        }
-    });
-    
-    // Add this inside the module.exports function
+
+    // Register route
     router.post('/register', async (req, res) => {
-        const { username, password, email } = req.body;
-        
         try {
-            // Check if user already exists
+            const { username, password, email } = req.body;
+            
+            // Check if user exists
             const existingUser = db.prepare('SELECT id FROM users WHERE username = ? OR email = ?')
                 .get(username, email);
             
@@ -153,32 +78,38 @@ module.exports = (db) => {
                     message: 'Username or email already exists'
                 });
             }
-            
-            // Create new user
-            const hashedPassword = await bcrypt.hash(password, 10);
+
+            // Hash password
+            const saltRounds = 10;
+            const passwordHash = await bcrypt.hash(password, saltRounds);
+
+            // Insert new user
             const result = db.prepare(`
-                INSERT INTO users (username, password_hash, email, role)
-                VALUES (?, ?, ?, 'customer')
-            `).run(username, hashedPassword, email);
-            
+                INSERT INTO users (username, password_hash, email, role, created_at)
+                VALUES (?, ?, ?, 'customer', datetime('now'))
+            `).run(username, passwordHash, email);
+
             res.json({
                 success: true,
-                message: 'Registration successful'
+                message: 'Registration successful',
+                id: result.lastInsertRowid
             });
-            
         } catch (error) {
-            console.error('Registration error:', {
-                error: error.message,
-                stack: error.stack,
-                username,
-                email
-            });
+            console.error('Registration error:', error);
             res.status(500).json({
                 success: false,
-                message: 'Internal server error'
+                message: 'Error creating account'
             });
         }
     });
-    
+
+    // Check session route
+    router.get('/check-session', (req, res) => {
+        res.json({
+            authenticated: !!req.session?.user,
+            user: req.session?.user || null
+        });
+    });
+
     return router;
 }; 

@@ -149,7 +149,9 @@ try {
             } else if (filePath.endsWith('.css')) {
                 res.setHeader('Content-Type', 'text/css');
             }
-        }
+        },
+        fallthrough: true,
+        index: false
     }));
 
     // Login and Register routes (no auth required)
@@ -363,10 +365,12 @@ try {
 
     // Start server with proper configuration
     const server = app.listen(PORT, HOST, () => {
-        console.log(`Server is running on ${HOST}:${PORT}`);
-        console.log('Environment:', process.env.NODE_ENV);
-        console.log('Database path:', dbPath);
-        console.log('Static files path:', path.join(__dirname, 'public'));
+        console.log('\n=== Server Configuration ===');
+        console.log(`Server: http://${HOST}:${PORT}`);
+        console.log(`Environment: ${process.env.NODE_ENV}`);
+        console.log(`Database: ${path.resolve(dbPath)}`);
+        console.log(`Static Files: ${path.resolve(__dirname, 'public')}`);
+        console.log('=========================\n');
     });
 
     // Increase timeouts
