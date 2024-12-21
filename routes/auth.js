@@ -103,5 +103,30 @@ module.exports = (db) => {
         });
     });
 
+    // Add account settings route
+    router.get('/account', (req, res) => {
+        try {
+            const user = db.prepare(`
+                SELECT id, username, email, role, created_at, last_login 
+                FROM users WHERE id = ?
+            `).get(req.session.user.id);
+
+            if (!user) {
+                return res.status(404).json({ success: false, message: 'User not found' });
+            }
+
+            // Remove sensitive data
+            delete user.password_hash;
+            
+            res.json({
+                success: true,
+                user: user
+            });
+        } catch (error) {
+            console.error('Account settings error:', error);
+            res.status(500).json({ success: false, message: 'Error retrieving account settings' });
+        }
+    });
+
     return router;
 }; 

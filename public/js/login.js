@@ -20,7 +20,7 @@ document.getElementById('loginForm').addEventListener('submit', async (e) => {
             if (result.role === 'admin') {
                 window.location.href = '/dashboard';
             } else {
-                window.location.href = '/';
+                window.location.href = '/customer-dashboard';
             }
         } else {
             showMessage(result.message || 'Login failed', 'danger');

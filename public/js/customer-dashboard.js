@@ -1,8 +1,9 @@
 // Handle logout
-document.getElementById('logoutButton').addEventListener('click', async () => {
+document.getElementById('logoutBtn').addEventListener('click', async () => {
     try {
         const response = await fetch('/api/auth/logout', {
-            method: 'POST'
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' }
         });
         
         if (response.ok) {
