@@ -11,6 +11,8 @@ services:
     envVars:
       - key: NODE_ENV
         value: production
+      - key: SESSION_SECRET
+        generateValue: true
       - key: SMTP_HOST
         sync: false
       - key: SMTP_PORT
@@ -33,6 +35,8 @@ services:
     envVars:
       - key: NODE_ENV
         value: production
+      - key: SESSION_SECRET
+        generateValue: true
       - key: SMTP_HOST
         sync: false
       - key: SMTP_PORT

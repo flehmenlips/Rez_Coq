@@ -102,17 +102,45 @@ try {
         saveUninitialized: false,
         name: 'rez_coq_session',
         cookie: {
-            secure: process.env.NODE_ENV === 'production',
+            secure: true,
             httpOnly: true,
-            maxAge: 24 * 60 * 60 * 1000 // 24 hours
-        }
+            maxAge: 24 * 60 * 60 * 1000, // 24 hours
+            sameSite: 'strict'
+        },
+        proxy: true
     }));
 
-    // Serve static files AFTER routes
-    app.use(express.static(path.join(__dirname, 'public')));
+    // Add security headers
+    app.use((req, res, next) => {
+        res.set({
+            'Strict-Transport-Security': 'max-age=31536000',
+            'X-Frame-Options': 'DENY',
+            'X-Content-Type-Options': 'nosniff'
+        });
+        next();
+    });
+
+    // Force HTTPS in production
+    if (isProduction) {
+        app.use((req, res, next) => {
+            if (req.secure) {
+                next();
+            } else {
+                res.redirect('https://' + req.headers.host + req.url);
+            }
+        });
+    }
 
     // Auth routes
     app.use('/api/auth', authRoutes(db));
+
+    // Root route - must be first
+    app.get('/', (req, res) => {
+        if (!req.session?.user) {
+            return res.redirect('/login');
+        }
+        res.sendFile(path.join(__dirname, 'public', 'index.html'));
+    });
 
     // Login and Register routes (no auth required)
     app.get('/login', (req, res) => {
@@ -319,6 +347,9 @@ try {
         }
         res.sendFile(path.join(__dirname, 'public', 'customer-dashboard.html'));
     });
+
+    // Serve static files LAST
+    app.use(express.static(path.join(__dirname, 'public')));
 
     // Start server
     app.listen(PORT, () => {
