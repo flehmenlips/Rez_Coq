@@ -136,7 +136,7 @@ module.exports = (db) => {
                 return res.status(500).json({ success: false, message: 'Logout failed' });
             }
             res.clearCookie('rez_coq_session');
-            res.json({ success: true, message: 'Logged out successfully' });
+            res.status(200).json({ success: true, message: 'Logged out successfully' });
         });
     });
 
