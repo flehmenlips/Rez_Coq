@@ -1,6 +1,6 @@
 {
   "name": "rez_coq",
-  "version": "1.2.3",
+  "version": "1.3.0",
   "engines": {
     "node": "18.x"
   },
@@ -12,7 +12,8 @@
     "start": "node main.js",
     "start:prod": "NODE_ENV=production node main.js",
     "test": "echo \"Tests passed\" && exit 0",
-    "create-admin": "node scripts/create-admin.js"
+    "create-admin": "node scripts/create-admin.js",
+    "view-db": "node scripts/view-db.js"
   },
   "dependencies": {
     "bcrypt": "^5.1.1",
