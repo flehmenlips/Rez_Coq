@@ -21,10 +21,34 @@ async function createAdmin() {
         const dbPath = process.env.DATABASE_PATH || path.join(__dirname, '..', 'dev_db', 'database.sqlite');
         const db = new Database(dbPath);
 
+        // First, check existing users
+        console.log('\nChecking existing users...');
+        const existingUsers = db.prepare('SELECT username, email, role FROM users').all();
+        if (existingUsers.length > 0) {
+            console.log('\nExisting users:');
+            existingUsers.forEach(user => {
+                console.log(`- ${user.username} (${user.email}) [${user.role}]`);
+            });
+        }
+
         // Get admin credentials
+        console.log('\nCreate new admin account:');
         const username = await promptInput('Enter admin username: ');
         const email = await promptInput('Enter admin email: ');
         const password = await promptInput('Enter admin password: ');
+
+        // Check if username or email already exists
+        const existingUser = db.prepare('SELECT username, email FROM users WHERE username = ? OR email = ?')
+            .get(username, email);
+
+        if (existingUser) {
+            if (existingUser.username === username) {
+                throw new Error('Username already exists');
+            }
+            if (existingUser.email === email) {
+                throw new Error('Email already exists');
+            }
+        }
 
         // Hash password
         const saltRounds = 10;
@@ -42,7 +66,8 @@ async function createAdmin() {
         console.log(`Email: ${email}`);
 
     } catch (error) {
-        console.error('Error creating admin:', error.message);
+        console.error('\nError:', error.message);
+        console.log('\nPlease try again with different credentials.');
     } finally {
         rl.close();
     }

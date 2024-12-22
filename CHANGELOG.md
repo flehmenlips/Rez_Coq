@@ -38,6 +38,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Deployment documentation
 - System health checks
 - Better error logging
+- Admin authentication system
+- Secure admin account creation
+- Environment-based configuration
+- Production admin initialization
 
 ## [1.1.18] - 2024-03-20
 ### Added
@@ -161,3 +165,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Changed
 - Reservation form now validates against daily capacity
 - Time slot selector disabled when capacity is reached
+
+## [1.2.2] - 2024-03-21
+### Added
+- Admin dashboard functionality
+- Restaurant settings management
+- Reservation display in admin view
+- Session persistence improvements
+
+### Fixed
+- Login redirect loop
+- Session handling
+- Logout functionality
+- Settings persistence
+- Admin authentication

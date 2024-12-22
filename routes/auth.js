@@ -13,10 +13,10 @@ module.exports = (db) => {
             // Query user
             const user = db.prepare('SELECT * FROM users WHERE username = ?').get(username);
             
-            console.log('Login attempt details:', {
-                usernameProvided: !!username,
+            console.log('Login attempt:', {
+                username,
                 userFound: !!user,
-                sessionExists: !!req.session
+                sessionId: req.sessionID
             });
 
             if (!user) {
@@ -25,7 +25,6 @@ module.exports = (db) => {
 
             // Verify password
             const match = await bcrypt.compare(password, user.password_hash);
-            console.log('Password verification:', { match });
 
             if (!match) {
                 return res.status(401).json({ success: false, message: 'Invalid credentials' });
@@ -37,7 +36,7 @@ module.exports = (db) => {
                 username: user.username, 
                 role: user.role 
             };
-            console.log('Session set:', req.session);
+            await new Promise((resolve) => req.session.save(resolve));
 
             res.json({ 
                 success: true, 
@@ -45,12 +44,7 @@ module.exports = (db) => {
                 role: user.role
             });
         } catch (error) {
-            console.error('Login error:', {
-                error: error.message,
-                stack: error.stack,
-                session: req.session,
-                username: req.body.username
-            });
+            console.error('Login error:', error);
             res.status(500).json({ success: false, message: 'Server error' });
         }
     });
@@ -136,6 +130,12 @@ module.exports = (db) => {
                 return res.status(500).json({ success: false, message: 'Logout failed' });
             }
             res.clearCookie('rez_coq_session');
+            res.clearCookie('connect.sid');
+            res.set({
+                'Cache-Control': 'no-store, no-cache, must-revalidate, proxy-revalidate',
+                'Pragma': 'no-cache',
+                'Expires': '0'
+            });
             res.status(200).json({ success: true, message: 'Logged out successfully' });
         });
     });
