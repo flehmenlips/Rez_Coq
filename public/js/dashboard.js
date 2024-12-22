@@ -16,6 +16,49 @@ async function loadSettings() {
     }
 }
 
+// Load reservations
+async function loadReservations() {
+    try {
+        const response = await fetch('/api/reservations');
+        if (!response.ok) throw new Error('Failed to load reservations');
+        const reservations = await response.json();
+        
+        const tbody = document.getElementById('reservationsList');
+        tbody.innerHTML = '';
+        
+        if (reservations.length === 0) {
+            tbody.innerHTML = `
+                <tr>
+                    <td colspan="6" class="text-center">No reservations found</td>
+                </tr>
+            `;
+            return;
+        }
+        
+        reservations.forEach(reservation => {
+            const row = document.createElement('tr');
+            row.innerHTML = `
+                <td>${new Date(reservation.date).toLocaleDateString()}</td>
+                <td>${reservation.time}</td>
+                <td>${reservation.name}</td>
+                <td>${reservation.email}</td>
+                <td>${reservation.guests}</td>
+                <td>${reservation.email_status}</td>
+            `;
+            tbody.appendChild(row);
+        });
+    } catch (error) {
+        console.error('Error loading reservations:', error);
+        document.getElementById('reservationsList').innerHTML = `
+            <tr>
+                <td colspan="6" class="text-center text-danger">
+                    Error loading reservations: ${error.message}
+                </td>
+            </tr>
+        `;
+    }
+}
+
 // Save settings
 document.getElementById('settingsForm').addEventListener('submit', async (e) => {
     e.preventDefault();
@@ -51,10 +94,13 @@ document.getElementById('settingsForm').addEventListener('submit', async (e) => 
     }
 });
 
-// Load settings on page load
-document.addEventListener('DOMContentLoaded', loadSettings);
+// Load data on page load
+document.addEventListener('DOMContentLoaded', () => {
+    loadSettings();
+    loadReservations();
+});
 
-// Add logout handler (from previous code)
+// Add logout handler
 document.getElementById('logoutBtn').addEventListener('click', async () => {
     try {
         const response = await fetch('/api/auth/logout', {
