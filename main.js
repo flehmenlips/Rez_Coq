@@ -139,8 +139,7 @@ try {
             httpOnly: true,
             maxAge: 24 * 60 * 60 * 1000,
             sameSite: 'lax',
-            path: '/',
-            expires: 0
+            path: '/'
         },
         proxy: true
     }));
@@ -153,9 +152,7 @@ try {
 
     // Root route - must be first
     app.get('/', (req, res) => {
-        if (!req.session?.user) {
-            return res.redirect('/login');
-        }
+        // Let auth middleware handle the redirect
         res.sendFile(path.join(__dirname, 'public', 'index.html'));
     });
 
