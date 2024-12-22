@@ -413,6 +413,24 @@ try {
     // Serve static files LAST
     app.use(express.static(path.join(__dirname, 'public')));
 
+    // Database viewer (admin only)
+    app.get('/api/admin/db-view', auth, async (req, res) => {
+        if (req.session.user.role !== 'admin') {
+            return res.status(403).json({ error: 'Admin access required' });
+        }
+        
+        try {
+            const data = {
+                users: db.prepare('SELECT id, username, email, role, created_at FROM users').all(),
+                reservations: db.prepare('SELECT * FROM reservations ORDER BY date, time').all(),
+                settings: db.prepare('SELECT * FROM settings').all()
+            };
+            res.json(data);
+        } catch (error) {
+            res.status(500).json({ error: error.message });
+        }
+    });
+
     // Start server with proper configuration
     const server = app.listen(PORT, HOST, () => {
         console.log('\n=== Server Configuration ===');

@@ -121,4 +121,20 @@ document.getElementById('logoutBtn').addEventListener('click', async () => {
         console.error('Logout error:', error);
         alert('Failed to logout. Please try again.');
     }
+});
+
+// Add to existing dashboard.js
+document.getElementById('viewDbBtn').addEventListener('click', async () => {
+    try {
+        const response = await fetch('/api/admin/db-view');
+        const data = await response.json();
+        
+        document.getElementById('dbContent').textContent = 
+            JSON.stringify(data, null, 2);
+        
+        new bootstrap.Modal(document.getElementById('dbViewer')).show();
+    } catch (error) {
+        console.error('Error viewing database:', error);
+        alert('Failed to load database contents');
+    }
 }); 

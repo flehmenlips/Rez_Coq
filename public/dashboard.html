@@ -209,6 +209,22 @@
                 </table>
             </div>
         </div>
+
+        <button id="viewDbBtn" class="btn btn-secondary">View Database</button>
+
+        <div id="dbViewer" class="modal fade" tabindex="-1">
+            <div class="modal-dialog modal-lg">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h5 class="modal-title">Database Contents</h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                    </div>
+                    <div class="modal-body">
+                        <pre id="dbContent"></pre>
+                    </div>
+                </div>
+            </div>
+        </div>
     </div>
 
     <script src="js/dashboard.js"></script>
