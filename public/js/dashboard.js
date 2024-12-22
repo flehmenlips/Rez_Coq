@@ -23,7 +23,7 @@ async function loadReservations() {
         if (!response.ok) throw new Error('Failed to load reservations');
         const reservations = await response.json();
         
-        const tbody = document.getElementById('reservationsList');
+        const tbody = document.getElementById('reservationsTable');
         tbody.innerHTML = '';
         
         if (reservations.length === 0) {
@@ -49,7 +49,7 @@ async function loadReservations() {
         });
     } catch (error) {
         console.error('Error loading reservations:', error);
-        document.getElementById('reservationsList').innerHTML = `
+        document.getElementById('reservationsTable').innerHTML = `
             <tr>
                 <td colspan="6" class="text-center text-danger">
                     Error loading reservations: ${error.message}
