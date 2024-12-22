@@ -179,3 +179,25 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Logout functionality
 - Settings persistence
 - Admin authentication
+
+## [1.3.0] - 2024-03-21
+### Added
+- Complete project documentation
+- MIT LICENSE
+- Development workflow guide
+- Environment setup instructions
+- Deployment procedures
+- Database viewer
+- Admin dashboard improvements
+
+### Changed
+- Improved README structure
+- Better error handling
+- Enhanced logging
+- Updated configuration guides
+
+### Fixed
+- Admin dashboard display
+- Reservation listing
+- Settings persistence
+- Session handling
