@@ -14,3 +14,8 @@ public/style.css
 public/styles.css
 public/dashboard.css
 .venv/
+*.sqlite
+*.sqlite-journal
+sessions.db
+npm-debug.log
+.vscode/

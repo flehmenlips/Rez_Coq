@@ -78,3 +78,50 @@ Required for production:
 - Auto-deploys from main branch
 - Proper MIME types for static files
 - Session handling through secure proxy
+
+# Development Workflow
+
+## Local Development
+1. Start local server:
+   ```bash
+   npm start
+   ```
+
+2. Create admin account:
+   ```bash
+   npm run create-admin
+   ```
+
+## Deployment
+1. Test changes locally
+2. Commit changes with descriptive message
+3. Use release script for version updates:
+   ```bash
+   ./release.sh <version>
+   ```
+
+## Environment Setup
+Required environment variables:
+- NODE_ENV=production
+- PORT=10000
+- SESSION_SECRET=<secure-key>
+- SMTP_HOST=smtp.gmail.com
+- SMTP_PORT=587
+- SMTP_USER=<email>
+- SMTP_APP_PASSWORD=<app-password>
+- ADMIN_EMAIL=<admin-email>
+- ADMIN_PASSWORD=<admin-password>
+
+## Testing Checklist
+1. Customer Flow:
+   - Registration
+   - Login
+   - Make reservation
+   - View reservations
+   - Cancel reservation
+
+2. Admin Flow:
+   - Login
+   - View all reservations
+   - Modify settings
+   - View database
