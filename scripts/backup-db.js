@@ -13,15 +13,20 @@ if (!fs.existsSync(backupPath)) {
 
 // Create backup filename with timestamp
 const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
-const backupFile = path.join(backupPath, `backup-${timestamp}.sql`);
+const backupFile = path.join(backupPath, `backup-${timestamp}.json`);
 
 try {
     const db = new Database(dbPath);
     
-    // Export all data
-    const dump = db.prepare('SELECT sql FROM sqlite_master WHERE type="table"').all();
+    // Export all data with correct SQL query
+    const schema = db.prepare(`
+        SELECT name, sql 
+        FROM sqlite_master 
+        WHERE type='table' AND name NOT LIKE 'sqlite_%'
+    `).all();
+    
     const data = {
-        schema: dump,
+        schema: schema,
         users: db.prepare('SELECT * FROM users').all(),
         reservations: db.prepare('SELECT * FROM reservations').all(),
         settings: db.prepare('SELECT * FROM settings').all()
