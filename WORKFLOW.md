@@ -133,3 +133,5 @@ Required environment variables:
    - View all reservations
    - Modify settings
    - View database
+
+See [BACKUP.md](BACKUP.md) for detailed backup/restore procedures.
