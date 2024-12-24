@@ -95,9 +95,17 @@ Required for production:
 ## Deployment
 1. Test changes locally
 2. Commit changes with descriptive message
-3. Use release script for version updates:
+3. Backup database before deployment:
+   ```bash
+   npm run backup-db
+   ```
+4. Use release script for version updates:
    ```bash
    ./release.sh <version>
+   ```
+5. After deployment, restore if needed:
+   ```bash
+   npm run restore-db
    ```
 
 ## Environment Setup

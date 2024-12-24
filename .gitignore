@@ -7,6 +7,9 @@ dev_db/
 .env.local
 .env.development
 .env.production
+backups/*.sql
+backups/*.json
+!backups/.gitkeep
 # Build output
 dist/
 # Old CSS files
