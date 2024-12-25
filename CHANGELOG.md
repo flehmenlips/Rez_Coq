@@ -19,11 +19,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Migrated to PostgreSQL database
 - Added Render.com PostgreSQL integration
 - Fixed deployment paths
+- Added session table creation
 
 ### Changed
 - Switched from SQLite to PostgreSQL
 - Updated database connection handling
 - Consolidated deployment settings
+- Improved session management
 
 ## [1.3.1] - 2024-03-21
 ### Added

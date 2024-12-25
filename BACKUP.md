@@ -1,48 +1,20 @@
 # Database Backup & Restore Guide
 
-## Manual Backup
-```bash
-# Create backup
-npm run backup-db
-```
-Backups are stored in `backups/` directory with timestamp.
+## Automatic Backups
+Render.com PostgreSQL includes:
+- Daily automated backups
+- Point-in-time recovery
+- 7-day backup retention
+- Automatic failover
 
-## Manual Restore
-```bash
-# Restore from latest backup
-npm run restore-db
-```
+## Backup Access
+1. Go to Render.com dashboard
+2. Select your database
+3. Click "Backups" tab
+4. Download or restore as needed
 
-## Deployment Process
-1. Before deploying:
-   ```bash
-   # Backup current database
-   npm run backup-db
-   
-   # Commit backup
-   git add backups/
-   git commit -m "Backup database before deployment"
-   ```
-
-2. After deployment:
-   ```bash
-   # If data is missing, restore
-   npm run restore-db
-   ```
-
-## Backup File Format
-Backups are stored as JSON files containing:
-- Database schema
-- User data
-- Reservations
-- Settings
-
-## Backup Location
-- Development: `./backups/`
-- Production: `/opt/render/project/data/backups/`
-
-## Automated Backups
-Coming soon:
-- Daily backups
-- Backup rotation
-- Cloud storage integration 
+## Backup Features
+- Automated daily backups
+- No manual intervention needed
+- Secure backup storage
+- Easy point-in-time recovery 

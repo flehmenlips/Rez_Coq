@@ -31,4 +31,11 @@ services:
   - type: postgresql
     name: rez_coq
     ipAllowList: []
-    plan: free 
+    plan: free
+    postDeploy: |
+      psql $DATABASE_URL -c "CREATE TABLE IF NOT EXISTS session (
+        sid varchar NOT NULL COLLATE \"default\",
+        sess json NOT NULL,
+        expire timestamp(6) NOT NULL,
+        CONSTRAINT session_pkey PRIMARY KEY (sid)
+      ) WITH (OIDS=FALSE);" 

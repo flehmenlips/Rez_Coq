@@ -1,23 +1,16 @@
 #!/bin/bash
 
-# Get the new version
-VERSION=$1
+# Pull latest changes
+git pull origin main
 
-if [ -z "$VERSION" ]; then
-    echo "Please provide a version number (e.g. ./release.sh 1.2.3)"
-    exit 1
-fi
+# Update version
+npm version $1
 
-# Update version in package.json
-sed -i '' "s/\"version\": \".*\"/\"version\": \"$VERSION\"/" package.json
-
-# Add and commit changes
-git add package.json CHANGELOG.md
-git commit -m "Release version $VERSION"
-
-# Create and push tag
-git tag -a "v$VERSION" -m "Release $VERSION"
+# Push changes
 git push origin main
-git push origin "v$VERSION"
+git push origin --tags
 
-echo "Released version $VERSION"
+# Restart the server (using pm2 or similar)
+pm2 restart rez_coq
+
+echo "Deployment complete"

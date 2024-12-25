@@ -78,6 +78,8 @@ Required for production:
 - Auto-deploys from main branch
 - Proper MIME types for static files
 - Session handling through secure proxy
+- Automatic database backups
+- Session persistence in PostgreSQL
 
 # Development Workflow
 
