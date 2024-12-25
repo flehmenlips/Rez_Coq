@@ -103,10 +103,10 @@ Required for production:
    ```bash
    ./release.sh <version>
    ```
-5. After deployment, restore if needed:
-   ```bash
-   npm run restore-db
-   ```
+5. Database persistence:
+   - Data stored in /opt/render/project/data
+   - Persists between deployments
+   - 1GB disk allocation
 
 ## Environment Setup
 Required environment variables:

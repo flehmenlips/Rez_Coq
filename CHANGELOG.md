@@ -4,6 +4,31 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+### Added
+- Daily guest capacity limit setting in dashboard
+- Real-time capacity checking for reservations
+- Dynamic availability updates based on capacity
+- User feedback for capacity limitations
+### Changed
+- Reservation form now validates against daily capacity
+- Time slot selector disabled when capacity is reached
+
+## [1.3.2] - 2024-03-21
+### Added
+- Database persistence on Render.com
+- Proper disk configuration
+- Fixed deployment paths
+
+### Changed
+- Updated render.yaml configuration
+- Improved database directory structure
+- Consolidated deployment settings
+
+## [1.3.1] - 2024-03-21
+### Added
+- Admin dashboard functionality
+
 ## [1.2.0] - 2024-03-21
 ### Added
 - Successfully deployed to production
@@ -155,49 +180,3 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - settings
 - Static file serving for frontend
 - Form validation and error handling 
-
-## [Unreleased]
-### Added
-- Daily guest capacity limit setting in dashboard
-- Real-time capacity checking for reservations
-- Dynamic availability updates based on capacity
-- User feedback for capacity limitations
-### Changed
-- Reservation form now validates against daily capacity
-- Time slot selector disabled when capacity is reached
-
-## [1.2.2] - 2024-03-21
-### Added
-- Admin dashboard functionality
-- Restaurant settings management
-- Reservation display in admin view
-- Session persistence improvements
-
-### Fixed
-- Login redirect loop
-- Session handling
-- Logout functionality
-- Settings persistence
-- Admin authentication
-
-## [1.3.0] - 2024-03-21
-### Added
-- Complete project documentation
-- MIT LICENSE
-- Development workflow guide
-- Environment setup instructions
-- Deployment procedures
-- Database viewer
-- Admin dashboard improvements
-
-### Changed
-- Improved README structure
-- Better error handling
-- Enhanced logging
-- Updated configuration guides
-
-### Fixed
-- Admin dashboard display
-- Reservation listing
-- Settings persistence
-- Session handling

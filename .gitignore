@@ -1,6 +1,5 @@
 node_modules/
 dev_db/
-.rez_coq/
 .DS_Store
 *.log
 .env
