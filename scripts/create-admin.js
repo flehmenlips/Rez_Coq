@@ -1,12 +1,18 @@
 require('dotenv').config();
-const Database = require('better-sqlite3');
+const { Pool } = require('pg');
 const bcrypt = require('bcrypt');
-const path = require('path');
 const readline = require('readline');
 
 const rl = readline.createInterface({
     input: process.stdin,
     output: process.stdout
+});
+
+const pool = new Pool({
+    connectionString: process.env.DATABASE_URL,
+    ssl: {
+        rejectUnauthorized: false
+    }
 });
 
 async function promptInput(question) {
@@ -15,21 +21,17 @@ async function promptInput(question) {
     });
 }
 
+async function listExistingUsers() {
+    const result = await pool.query('SELECT username, email, role FROM users');
+    console.log('\nExisting users:');
+    result.rows.forEach(user => {
+        console.log(`- ${user.username} (${user.email}) [${user.role}]`);
+    });
+}
+
 async function createAdmin() {
     try {
-        // Get database path from environment or use default
-        const dbPath = process.env.DATABASE_PATH || path.join(__dirname, '..', 'dev_db', 'database.sqlite');
-        const db = new Database(dbPath);
-
-        // First, check existing users
-        console.log('\nChecking existing users...');
-        const existingUsers = db.prepare('SELECT username, email, role FROM users').all();
-        if (existingUsers.length > 0) {
-            console.log('\nExisting users:');
-            existingUsers.forEach(user => {
-                console.log(`- ${user.username} (${user.email}) [${user.role}]`);
-            });
-        }
+        await listExistingUsers();
 
         // Get admin credentials
         console.log('\nCreate new admin account:');
@@ -37,17 +39,14 @@ async function createAdmin() {
         const email = await promptInput('Enter admin email: ');
         const password = await promptInput('Enter admin password: ');
 
-        // Check if username or email already exists
-        const existingUser = db.prepare('SELECT username, email FROM users WHERE username = ? OR email = ?')
-            .get(username, email);
+        // Check if username or email exists
+        const existingUser = await pool.query(
+            'SELECT username, email FROM users WHERE username = $1 OR email = $2',
+            [username, email]
+        );
 
-        if (existingUser) {
-            if (existingUser.username === username) {
-                throw new Error('Username already exists');
-            }
-            if (existingUser.email === email) {
-                throw new Error('Email already exists');
-            }
+        if (existingUser.rows.length > 0) {
+            throw new Error('Username or email already exists');
         }
 
         // Hash password
@@ -55,19 +54,21 @@ async function createAdmin() {
         const passwordHash = await bcrypt.hash(password, saltRounds);
 
         // Insert admin user
-        const result = db.prepare(`
-            INSERT INTO users (username, password_hash, email, role, verified)
-            VALUES (?, ?, ?, 'admin', 1)
-        `).run(username, passwordHash, email);
+        const result = await pool.query(
+            `INSERT INTO users (username, password_hash, email, role, verified)
+             VALUES ($1, $2, $3, 'admin', true) RETURNING id`,
+            [username, passwordHash, email]
+        );
 
         console.log('\nAdmin account created successfully!');
-        console.log(`ID: ${result.lastInsertRowid}`);
+        console.log(`ID: ${result.rows[0].id}`);
         console.log(`Username: ${username}`);
         console.log(`Email: ${email}`);
 
+        await pool.end();
     } catch (error) {
-        console.error('\nError:', error.message);
-        console.log('\nPlease try again with different credentials.');
+        console.error('Error:', error);
+        process.exit(1);
     } finally {
         rl.close();
     }
