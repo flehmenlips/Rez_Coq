@@ -76,6 +76,8 @@ Required for production:
 ### Deployment Notes
 - PostgreSQL database hosted on Render.com
 - Auto-deploys from main branch
+- Monitor deployments in Render dashboard
+- Email notifications for deploy status
 - Proper MIME types for static files
 - Session handling through secure proxy
 - Automatic database backups

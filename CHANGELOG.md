@@ -20,6 +20,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Added Render.com PostgreSQL integration
 - Fixed deployment paths
 - Added session table creation
+- Enabled auto-deployment on Render
+- Added deployment notifications
 
 ### Changed
 - Switched from SQLite to PostgreSQL
