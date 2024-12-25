@@ -1,6 +1,6 @@
 # Rez Coq - Restaurant Reservation System
 
-A modern, secure restaurant reservation system built with Node.js and SQLite. Features customer reservations, email confirmations, and a complete admin dashboard.
+A modern, secure restaurant reservation system built with Node.js and PostgreSQL. Features customer reservations, email confirmations, and a complete admin dashboard.
 
 ## Live Demo
 https://rez-coq.onrender.com
@@ -26,7 +26,7 @@ https://rez-coq.onrender.com
 
 ## Tech Stack
 - **Backend**: Node.js, Express
-- **Database**: SQLite3
+- **Database**: PostgreSQL
 - **Frontend**: HTML5, Bootstrap 5
 - **Email**: Nodemailer
 - **Security**: Session-based auth, CSRF protection
