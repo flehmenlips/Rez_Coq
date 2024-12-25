@@ -16,13 +16,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [1.3.2] - 2024-03-21
 ### Added
-- Database persistence on Render.com
-- Proper disk configuration
+- Migrated to PostgreSQL database
+- Added Render.com PostgreSQL integration
 - Fixed deployment paths
 
 ### Changed
-- Updated render.yaml configuration
-- Improved database directory structure
+- Switched from SQLite to PostgreSQL
+- Updated database connection handling
 - Consolidated deployment settings
 
 ## [1.3.1] - 2024-03-21

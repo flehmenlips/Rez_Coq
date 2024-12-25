@@ -50,7 +50,7 @@ Successfully deployed at: https://rez-coq.onrender.com
 
 ### Tech Stack
 - Node.js/Express backend
-- SQLite database
+- PostgreSQL database
 - Bootstrap UI
 - Render.com hosting
 - SMTP email integration
@@ -74,7 +74,7 @@ Required for production:
 - SMTP_APP_PASSWORD
 
 ### Deployment Notes
-- Database persists in Render.com disk storage
+- PostgreSQL database hosted on Render.com
 - Auto-deploys from main branch
 - Proper MIME types for static files
 - Session handling through secure proxy
@@ -95,14 +95,11 @@ Required for production:
 ## Deployment
 1. Test changes locally
 2. Commit changes with descriptive message
-3. Backup database before deployment:
-   ```bash
-   npm run backup-db
-   ```
-4. Use release script for version updates:
-   ```bash
-   ./release.sh <version>
-   ```
+3. Database:
+   - PostgreSQL hosted on Render.com
+   - Automatic backups included
+   - No manual backup needed
+4. Use release script for version updates
 5. Database persistence:
    - Data stored in /opt/render/project/data
    - Persists between deployments
