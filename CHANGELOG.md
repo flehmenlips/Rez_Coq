@@ -14,7 +14,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Reservation form now validates against daily capacity
 - Time slot selector disabled when capacity is reached
 
-## [1.3.2] - 2024-03-21
+## [1.3.3] - 2024-03-21
 ### Added
 - Migrated to PostgreSQL database
 - Added Render.com PostgreSQL integration
