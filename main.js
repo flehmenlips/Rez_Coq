@@ -46,28 +46,24 @@ console.log('Database URL:', process.env.DATABASE_URL ? 'Set' : 'Missing');
 // Initialize database
 async function initializeDatabase() {
     try {
-        // Check if database needs initialization
-        const result = await pool.query('SELECT COUNT(*) as count FROM settings');
-        const needsInit = result.rows[0].count === 0;
-        
-        if (needsInit) {
-            console.log('Initializing new database...');
-            await setupDatabase();
-        }
+        // Always try to create tables (IF NOT EXISTS handles duplicates)
+        console.log('Initializing database...');
+        await setupDatabase();
         
         // Create default admin if needed
         await createAdminIfNeeded();
         
     } catch (error) {
         console.error('Database initialization error:', error);
-        process.exit(1);
+        // Don't exit, just log the error
+        console.error('Continuing with startup...');
     }
 }
 
 // Database setup function
 async function setupDatabase() {
     try {
-        // Create tables
+        console.log('Creating session table...');
         await pool.query(`
             CREATE TABLE IF NOT EXISTS "session" (
                 "sid" varchar NOT NULL COLLATE "default",
@@ -75,7 +71,12 @@ async function setupDatabase() {
                 "expire" timestamp(6) NOT NULL,
                 CONSTRAINT "session_pkey" PRIMARY KEY ("sid")
             );
+        `);
+        console.log('Session table created successfully');
 
+        console.log('Creating other tables...');
+        // Create tables
+        await pool.query(`
             CREATE TABLE IF NOT EXISTS users (
                 id SERIAL PRIMARY KEY,
                 username VARCHAR(255) UNIQUE NOT NULL,
@@ -106,7 +107,6 @@ async function setupDatabase() {
             );
         `);
         console.log('Database tables created successfully');
-        console.log('Session table created successfully');
     } catch (error) {
         console.error('Error setting up database:', error);
         throw error;
