@@ -69,6 +69,13 @@ async function setupDatabase() {
     try {
         // Create tables
         await pool.query(`
+            CREATE TABLE IF NOT EXISTS "session" (
+                "sid" varchar NOT NULL COLLATE "default",
+                "sess" json NOT NULL,
+                "expire" timestamp(6) NOT NULL,
+                CONSTRAINT "session_pkey" PRIMARY KEY ("sid")
+            );
+
             CREATE TABLE IF NOT EXISTS users (
                 id SERIAL PRIMARY KEY,
                 username VARCHAR(255) UNIQUE NOT NULL,
@@ -99,6 +106,7 @@ async function setupDatabase() {
             );
         `);
         console.log('Database tables created successfully');
+        console.log('Session table created successfully');
     } catch (error) {
         console.error('Error setting up database:', error);
         throw error;

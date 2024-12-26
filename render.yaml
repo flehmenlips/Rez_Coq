@@ -5,9 +5,10 @@ services:
     buildCommand: |
       apt-get update -qq && \
       apt-get install -y python3 build-essential && \
-      mkdir -p /opt/render/project/data && \
       npm install
     startCommand: node main.js
+    postDeploy: |
+      node scripts/setup-postgres.js
     envVars:
       - key: NODE_ENV
         value: production
@@ -31,11 +32,4 @@ services:
   - type: postgresql
     name: rez_coq
     ipAllowList: []
-    plan: free
-    postDeploy: |
-      psql $DATABASE_URL -c "CREATE TABLE IF NOT EXISTS session (
-        sid varchar NOT NULL COLLATE \"default\",
-        sess json NOT NULL,
-        expire timestamp(6) NOT NULL,
-        CONSTRAINT session_pkey PRIMARY KEY (sid)
-      ) WITH (OIDS=FALSE);" 
+    plan: free 
