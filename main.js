@@ -146,6 +146,24 @@ app.use('/api/auth', authRoutes(pool));
 app.use('/api/reservations', reservationRoutes());
 app.use('/api/settings', settingsRoutes());
 
+// Serve static HTML pages
+app.get('/login', (req, res) => {
+    res.sendFile(path.join(__dirname, 'public', 'login.html'));
+});
+
+app.get('/', (req, res) => {
+    // Redirect to login if not authenticated
+    if (!req.session?.user) {
+        return res.redirect('/login');
+    }
+    res.sendFile(path.join(__dirname, 'public', 'index.html'));
+});
+
+// Catch-all route for other pages
+app.get('*', (req, res) => {
+    res.redirect('/login');
+});
+
 // Admin creation function
 async function createAdminIfNeeded() {
     try {
