@@ -22,12 +22,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Added session table creation
 - Enabled auto-deployment on Render
 - Added deployment notifications
+- Added environment-specific database config
+- Added database connection testing
 
 ### Changed
 - Switched from SQLite to PostgreSQL
 - Updated database connection handling
 - Consolidated deployment settings
 - Improved session management
+- Enhanced SSL configuration
 
 ## [1.3.1] - 2024-03-21
 ### Added
