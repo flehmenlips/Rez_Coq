@@ -27,9 +27,11 @@ document.getElementById('loginForm').addEventListener('submit', async (e) => {
     submitButton.disabled = true;
     
     try {
+        console.log('Attempting login with type:', currentLoginType);
         const response = await fetch('/api/auth/login', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
+            credentials: 'same-origin',
             body: JSON.stringify({
                 username: form.username.value,
                 password: form.password.value,
@@ -37,7 +39,9 @@ document.getElementById('loginForm').addEventListener('submit', async (e) => {
             })
         });
         
+        console.log('Login response status:', response.status);
         const result = await response.json();
+        console.log('Login result:', result);
         
         if (result.success) {
             if (result.role === 'admin') {
@@ -49,6 +53,7 @@ document.getElementById('loginForm').addEventListener('submit', async (e) => {
             showMessage(result.message || 'Login failed', 'danger');
         }
     } catch (error) {
+        console.error('Login error:', error);
         showMessage('Login failed. Please try again.', 'danger');
     } finally {
         submitButton.disabled = false;
@@ -58,14 +63,19 @@ document.getElementById('loginForm').addEventListener('submit', async (e) => {
 function showMessage(message, type) {
     const messageDiv = document.getElementById('loginMessage');
     messageDiv.textContent = message;
-    messageDiv.className = `alert alert-${type}`;
+    messageDiv.className = `alert alert-${type} mt-3`;
     messageDiv.style.display = 'block';
     
+    // Clear message after 5 seconds
     setTimeout(() => {
         messageDiv.style.display = 'none';
-    }, 3000);
-} 
+    }, 5000);
+}
+
 // Check if we were redirected here
 if (window.location.search) {
-    console.log('Redirected to login with query:', window.location.search);
+    const params = new URLSearchParams(window.location.search);
+    if (params.has('error')) {
+        showMessage(params.get('error'), 'danger');
+    }
 } 

@@ -33,7 +33,7 @@ function auth(req, res, next) {
 
 // Admin authorization middleware
 function requireAdmin(req, res, next) {
-    if (!req.session?.user?.role === 'admin') {
+    if (req.session?.user?.role !== 'admin') {
         return res.status(403).json({
             success: false,
             message: 'Admin access required'
