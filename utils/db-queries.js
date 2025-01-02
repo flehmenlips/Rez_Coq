@@ -57,7 +57,11 @@ async function getSettings() {
     const client = await pool.connect();
     try {
         const result = await client.query('SELECT * FROM settings LIMIT 1');
+        console.log('Retrieved settings:', result.rows[0]);
         return result.rows[0] || {};
+    } catch (error) {
+        console.error('Database error in getSettings:', error);
+        throw error;
     } finally {
         client.release();
     }
@@ -66,6 +70,8 @@ async function getSettings() {
 async function updateSettings(settings) {
     const client = await pool.connect();
     try {
+        console.log('Updating settings in database:', settings);
+        
         const {
             opening_time,
             closing_time,
@@ -74,7 +80,7 @@ async function updateSettings(settings) {
             window_update_time
         } = settings;
 
-        await client.query(`
+        const result = await client.query(`
             UPDATE settings 
             SET opening_time = $1,
                 closing_time = $2,
@@ -83,9 +89,42 @@ async function updateSettings(settings) {
                 window_update_time = $5,
                 updated_at = CURRENT_TIMESTAMP
             WHERE id = (SELECT id FROM settings LIMIT 1)
-        `, [opening_time, closing_time, slot_duration, reservation_window, window_update_time]);
+            RETURNING *
+        `, [
+            opening_time,
+            closing_time,
+            slot_duration,
+            reservation_window,
+            window_update_time
+        ]);
 
-        return true;
+        if (result.rowCount === 0) {
+            // No rows were updated, insert new settings
+            console.log('No existing settings found, creating new settings');
+            const insertResult = await client.query(`
+                INSERT INTO settings (
+                    opening_time,
+                    closing_time,
+                    slot_duration,
+                    reservation_window,
+                    window_update_time
+                ) VALUES ($1, $2, $3, $4, $5)
+                RETURNING *
+            `, [
+                opening_time,
+                closing_time,
+                slot_duration,
+                reservation_window,
+                window_update_time
+            ]);
+            return insertResult.rows[0];
+        }
+
+        console.log('Settings updated successfully:', result.rows[0]);
+        return result.rows[0];
+    } catch (error) {
+        console.error('Database error in updateSettings:', error);
+        throw error;
     } finally {
         client.release();
     }
