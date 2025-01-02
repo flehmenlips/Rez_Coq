@@ -63,11 +63,47 @@ const reservationRoutes = () => {
     // Create new reservation
     router.post('/', async (req, res) => {
         try {
+            const { date, time, guests } = req.body;
+            
+            // Get settings for validation
+            const settings = await getSettings();
+            const maxPartySize = parseInt(settings.max_party_size);
+            const dailyMaxGuests = parseInt(settings.daily_max_guests);
+            
+            // Validate party size
+            if (parseInt(guests) > maxPartySize) {
+                return res.status(400).json({
+                    success: false,
+                    message: `Party size cannot exceed ${maxPartySize} guests`
+                });
+            }
+            
+            // Get total guests for the day
+            const existingReservations = await pool.query(
+                'SELECT SUM(guests) as total_guests FROM reservations WHERE date = $1',
+                [date]
+            );
+            
+            const currentTotal = parseInt(existingReservations.rows[0]?.total_guests || 0);
+            const newTotal = currentTotal + parseInt(guests);
+            
+            // Validate against daily maximum
+            if (newTotal > dailyMaxGuests) {
+                return res.status(400).json({
+                    success: false,
+                    message: `Cannot exceed ${dailyMaxGuests} total guests per day. Currently ${currentTotal} guests reserved.`
+                });
+            }
+            
+            // Create the reservation
             const reservation = await createReservation(req.body);
             res.json({ success: true, reservation });
         } catch (error) {
             console.error('Error creating reservation:', error);
-            res.status(500).json({ success: false, message: 'Failed to create reservation' });
+            res.status(500).json({
+                success: false,
+                message: error.message || 'Failed to create reservation'
+            });
         }
     });
 

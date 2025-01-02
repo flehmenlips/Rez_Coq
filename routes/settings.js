@@ -36,19 +36,48 @@ const settingsRoutes = () => {
                 closing_time,
                 slot_duration,
                 reservation_window,
-                window_update_time
+                window_update_time,
+                daily_max_guests,
+                max_party_size
             } = req.body;
 
             // Validate inputs
-            if (!opening_time || !closing_time || !slot_duration) {
+            if (!opening_time || !closing_time || !slot_duration || !daily_max_guests || !max_party_size) {
                 return res.status(400).json({
                     success: false,
                     message: 'Missing required fields'
                 });
             }
 
+            // Validate numeric values
+            const maxGuests = parseInt(daily_max_guests);
+            const maxParty = parseInt(max_party_size);
+            const slotDur = parseInt(slot_duration);
+            const resWindow = parseInt(reservation_window);
+
+            if (isNaN(maxGuests) || maxGuests < 1) {
+                return res.status(400).json({
+                    success: false,
+                    message: 'Daily maximum guests must be a positive number'
+                });
+            }
+
+            if (isNaN(maxParty) || maxParty < 1) {
+                return res.status(400).json({
+                    success: false,
+                    message: 'Maximum party size must be a positive number'
+                });
+            }
+
+            if (maxParty > maxGuests) {
+                return res.status(400).json({
+                    success: false,
+                    message: 'Maximum party size cannot be greater than daily maximum guests'
+                });
+            }
+
             // Validate reservation window
-            if (reservation_window < 1 || reservation_window > 365) {
+            if (resWindow < 1 || resWindow > 365) {
                 return res.status(400).json({
                     success: false,
                     message: 'Reservation window must be between 1 and 365 days'
@@ -59,23 +88,25 @@ const settingsRoutes = () => {
             const settings = {
                 opening_time: String(opening_time),
                 closing_time: String(closing_time),
-                slot_duration: parseInt(slot_duration),
-                reservation_window: parseInt(reservation_window),
-                window_update_time: String(window_update_time)
+                slot_duration: slotDur,
+                reservation_window: resWindow,
+                window_update_time: String(window_update_time),
+                daily_max_guests: maxGuests,
+                max_party_size: maxParty
             };
-
-            console.log('Updating settings with:', settings);
 
             // Update settings
             await updateSettings(settings);
-
-            res.json({ success: true, message: 'Settings updated successfully' });
+            
+            res.json({
+                success: true,
+                message: 'Settings updated successfully'
+            });
         } catch (error) {
             console.error('Error updating settings:', error);
-            res.status(500).json({ 
-                success: false, 
-                message: 'Failed to update settings',
-                error: error.message
+            res.status(500).json({
+                success: false,
+                message: 'Failed to update settings'
             });
         }
     });

@@ -152,29 +152,38 @@ async function updateSettings(settings) {
 
 // Initialize settings if they don't exist
 async function initializeSettings() {
-    const client = await pool.connect();
     try {
-        const result = await client.query('SELECT COUNT(*) FROM settings');
-        if (result.rows[0].count === '0') {
-            await client.query('BEGIN');
-            
-            // Use all settings from defaultSettings
-            for (const [key, value] of Object.entries(defaultSettings)) {
-                await client.query(
+        const defaultSettings = {
+            opening_time: '11:00',
+            closing_time: '22:00',
+            slot_duration: '60',
+            reservation_window: '30',
+            window_update_time: '00:00',
+            daily_max_guests: '100',
+            max_party_size: '10'
+        };
+
+        // Get existing settings
+        const result = await pool.query('SELECT * FROM settings');
+        const existingSettings = {};
+        result.rows.forEach(row => {
+            existingSettings[row.key] = row.value;
+        });
+
+        // Update or insert settings
+        for (const [key, value] of Object.entries(defaultSettings)) {
+            if (!existingSettings[key]) {
+                await pool.query(
                     'INSERT INTO settings (key, value) VALUES ($1, $2)',
-                    [key, String(value)]
+                    [key, value]
                 );
             }
-            
-            await client.query('COMMIT');
-            console.log('Initial settings created:', defaultSettings);
         }
+
+        console.log('Settings initialized successfully');
     } catch (error) {
-        await client.query('ROLLBACK');
         console.error('Error initializing settings:', error);
         throw error;
-    } finally {
-        client.release();
     }
 }
 
