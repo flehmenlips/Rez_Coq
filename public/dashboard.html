@@ -182,6 +182,28 @@
                     </div>
                 </div>
 
+                <div class="form-group">
+                    <label for="reservation_window">Reservation Window (days)</label>
+                    <input type="number" 
+                           class="form-control" 
+                           id="reservation_window" 
+                           name="reservation_window" 
+                           min="1" 
+                           max="365" 
+                           required>
+                    <small class="form-text text-muted">How many days in advance can customers make reservations?</small>
+                </div>
+
+                <div class="form-group">
+                    <label for="window_update_time">Window Update Time</label>
+                    <input type="time" 
+                           class="form-control" 
+                           id="window_update_time" 
+                           name="window_update_time" 
+                           required>
+                    <small class="form-text text-muted">What time should the reservation window roll forward each day?</small>
+                </div>
+
                 <div class="text-end mt-4">
                     <button type="submit" class="btn btn-save btn-lg">Save Settings</button>
                 </div>

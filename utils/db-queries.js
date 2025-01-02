@@ -54,23 +54,41 @@ async function createReservation(data) {
 
 // Settings queries
 async function getSettings() {
-    const result = await pool.query('SELECT * FROM settings');
-    const settings = result.rows.reduce((acc, row) => {
-        acc[row.key] = row.value;
-        return acc;
-    }, {});
-
-    // Merge with default settings
-    return { ...defaultSettings, ...settings };
+    const client = await pool.connect();
+    try {
+        const result = await client.query('SELECT * FROM settings LIMIT 1');
+        return result.rows[0] || {};
+    } finally {
+        client.release();
+    }
 }
 
-async function updateSetting(key, value) {
-    await pool.query(
-        `INSERT INTO settings (key, value) 
-         VALUES ($1, $2)
-         ON CONFLICT (key) DO UPDATE SET value = $2`,
-        [key, value]
-    );
+async function updateSettings(settings) {
+    const client = await pool.connect();
+    try {
+        const {
+            opening_time,
+            closing_time,
+            slot_duration,
+            reservation_window,
+            window_update_time
+        } = settings;
+
+        await client.query(`
+            UPDATE settings 
+            SET opening_time = $1,
+                closing_time = $2,
+                slot_duration = $3,
+                reservation_window = $4,
+                window_update_time = $5,
+                updated_at = CURRENT_TIMESTAMP
+            WHERE id = (SELECT id FROM settings LIMIT 1)
+        `, [opening_time, closing_time, slot_duration, reservation_window, window_update_time]);
+
+        return true;
+    } finally {
+        client.release();
+    }
 }
 
 // Initialize settings if they don't exist

@@ -38,10 +38,36 @@ async function setupDatabase() {
             );
 
             CREATE TABLE IF NOT EXISTS settings (
-                key VARCHAR(255) PRIMARY KEY,
-                value TEXT NOT NULL
+                id SERIAL PRIMARY KEY,
+                opening_time TIME NOT NULL DEFAULT '11:00',
+                closing_time TIME NOT NULL DEFAULT '22:00',
+                slot_duration INTEGER NOT NULL DEFAULT 60,
+                reservation_window INTEGER NOT NULL DEFAULT 30,
+                window_update_time TIME NOT NULL DEFAULT '00:00',
+                created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+                updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
             );
         `);
+
+        // Add default settings if none exist
+        const settingsResult = await pool.query('SELECT * FROM settings LIMIT 1');
+        if (settingsResult.rows.length === 0) {
+            await pool.query(`
+                INSERT INTO settings (
+                    opening_time, 
+                    closing_time, 
+                    slot_duration,
+                    reservation_window,
+                    window_update_time
+                ) VALUES (
+                    '11:00',
+                    '22:00',
+                    60,
+                    30,
+                    '00:00'
+                );
+            `);
+        }
 
         console.log('Database setup complete!');
         await pool.end();

@@ -24,6 +24,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Added deployment notifications
 - Added environment-specific database config
 - Added database connection testing
+- Added automatic database initialization
+- Added default admin creation
+- Added proper session table management
+- Added detailed database logging
+- Added login page and authentication flow
 
 ### Changed
 - Switched from SQLite to PostgreSQL
@@ -31,6 +36,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Consolidated deployment settings
 - Improved session management
 - Enhanced SSL configuration
+- Improved startup sequence
+- Simplified deployment configuration
+- Improved error handling
+- Enhanced database initialization
+- Fixed route ordering
+- Improved authentication redirects
 
 ## [1.3.1] - 2024-03-21
 ### Added

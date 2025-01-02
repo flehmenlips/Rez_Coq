@@ -306,6 +306,37 @@
         }
     });
 
+    // Set up date constraints based on settings
+    async function setupDatePicker() {
+        try {
+            const response = await fetch('/api/settings');
+            const settings = await response.json();
+            
+            const dateInput = document.getElementById('date');
+            const today = new Date();
+            const maxDate = new Date();
+            maxDate.setDate(today.getDate() + settings.reservation_window);
+            
+            // Set min date to today
+            dateInput.min = today.toISOString().split('T')[0];
+            // Set max date based on window
+            dateInput.max = maxDate.toISOString().split('T')[0];
+            
+            console.log('Date picker configured:', {
+                min: dateInput.min,
+                max: dateInput.max,
+                window: settings.reservation_window
+            });
+        } catch (error) {
+            console.error('Error setting up date picker:', error);
+        }
+    }
+
+    document.addEventListener('DOMContentLoaded', () => {
+        checkAuth();
+        setupDatePicker();
+    });
+
     // Add time slot population
     document.getElementById('date').addEventListener('change', async (e) => {
         const date = e.target.value;
