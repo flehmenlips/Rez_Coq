@@ -125,7 +125,7 @@
                     </div>
                     
                     <div class="form-group">
-                        <label for="guests" class="form-label">Number of Guests</label>
+                        <label for="guests" class="form-label">Number of Guests <span id="partyLimit" class="text-muted"></span></label>
                         <input type="number" 
                                class="form-control" 
                                id="guests" 
@@ -133,9 +133,8 @@
                                min="1" 
                                required
                                data-bs-toggle="tooltip" 
-                               data-bs-placement="top" 
-                               title="For larger groups, please call us directly">
-                        <small class="help-text">Maximum party size varies by time and date</small>
+                               data-bs-placement="top">
+                        <small class="help-text">For larger groups, please call us directly</small>
                     </div>
                     
                     <div class="form-group">
@@ -215,6 +214,26 @@
           </div>
         </div>
       </div>
+    </div>
+
+    <div class="modal fade" id="validationModal" tabindex="-1" aria-labelledby="validationModalLabel" aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="validationModalLabel">Invalid Party Size</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="alert alert-warning" role="alert">
+                        <i class="bi bi-exclamation-triangle-fill me-2"></i>
+                        <span id="validationMessage"></span>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                </div>
+            </div>
+        </div>
     </div>
 
     <script src="script.js"></script>
@@ -332,9 +351,79 @@
         }
     }
 
+    async function setupGuestsValidation() {
+        try {
+            const response = await fetch('/api/settings');
+            const settings = await response.json();
+            
+            const guestsInput = document.getElementById('guests');
+            const maxPartySize = parseInt(settings.max_party_size);
+            const dailyMaxGuests = parseInt(settings.daily_max_guests);
+            
+            // Update label with max party size
+            document.getElementById('partyLimit').textContent = `(Parties of ${maxPartySize} or less)`;
+            
+            // Set input attributes
+            guestsInput.max = maxPartySize;
+            guestsInput.title = `Maximum party size is ${maxPartySize}`;
+            
+            // Add input validation
+            guestsInput.addEventListener('input', function(e) {
+                const value = parseInt(this.value);
+                if (value > maxPartySize) {
+                    // Show validation modal
+                    document.getElementById('validationMessage').textContent = 
+                        `Party size cannot exceed ${maxPartySize} guests. For larger groups, please contact us directly.`;
+                    new bootstrap.Modal(document.getElementById('validationModal')).show();
+                    
+                    // Reset to max allowed value
+                    this.value = maxPartySize;
+                }
+            });
+            
+            // Add date change listener to check daily capacity
+            document.getElementById('date').addEventListener('change', async function(e) {
+                const date = this.value;
+                if (date) {
+                    try {
+                        const response = await fetch(`/api/reservations/daily-count?date=${date}`);
+                        const data = await response.json();
+                        const currentTotal = parseInt(data.total_guests || 0);
+                        const remainingCapacity = dailyMaxGuests - currentTotal;
+                        
+                        // Update guests input max based on remaining capacity
+                        const newMax = Math.min(maxPartySize, remainingCapacity);
+                        guestsInput.max = newMax;
+                        
+                        if (remainingCapacity <= 0) {
+                            document.getElementById('validationMessage').textContent = 
+                                `We're fully booked for this date. Please select another date.`;
+                            new bootstrap.Modal(document.getElementById('validationModal')).show();
+                            this.value = ''; // Clear the date
+                        } else if (remainingCapacity < maxPartySize) {
+                            document.getElementById('validationMessage').textContent = 
+                                `Due to capacity limits, we can only accommodate parties of ${newMax} or less for this date.`;
+                            new bootstrap.Modal(document.getElementById('validationModal')).show();
+                        }
+                        
+                        // Update help text
+                        guestsInput.title = `Maximum party size for this date is ${newMax}`;
+                        document.getElementById('partyLimit').textContent = 
+                            `(Parties of ${newMax} or less for this date)`;
+                    } catch (error) {
+                        console.error('Error checking daily capacity:', error);
+                    }
+                }
+            });
+        } catch (error) {
+            console.error('Error setting up guests validation:', error);
+        }
+    }
+
     document.addEventListener('DOMContentLoaded', () => {
         checkAuth();
         setupDatePicker();
+        setupGuestsValidation();
     });
 
     // Add time slot population

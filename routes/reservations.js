@@ -107,6 +107,35 @@ const reservationRoutes = () => {
         }
     });
 
+    // Get daily guest count
+    router.get('/daily-count', async (req, res) => {
+        try {
+            const { date } = req.query;
+            if (!date) {
+                return res.status(400).json({
+                    success: false,
+                    message: 'Date parameter is required'
+                });
+            }
+
+            const result = await pool.query(
+                'SELECT SUM(guests) as total_guests FROM reservations WHERE date = $1',
+                [date]
+            );
+
+            res.json({
+                success: true,
+                total_guests: result.rows[0]?.total_guests || 0
+            });
+        } catch (error) {
+            console.error('Error getting daily guest count:', error);
+            res.status(500).json({
+                success: false,
+                message: 'Failed to get daily guest count'
+            });
+        }
+    });
+
     return router;
 };
 
