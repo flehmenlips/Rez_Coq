@@ -56,9 +56,17 @@ async function createReservation(data) {
 async function getSettings() {
     const client = await pool.connect();
     try {
-        const result = await client.query('SELECT * FROM settings LIMIT 1');
-        console.log('Retrieved settings:', result.rows[0]);
-        return result.rows[0] || {};
+        const result = await client.query('SELECT key, value FROM settings');
+        console.log('Retrieved settings rows:', result.rows);
+        
+        // Convert rows to object
+        const settings = result.rows.reduce((acc, row) => {
+            acc[row.key] = row.value;
+            return acc;
+        }, {});
+        
+        console.log('Converted settings:', settings);
+        return settings;
     } catch (error) {
         console.error('Database error in getSettings:', error);
         throw error;
@@ -72,57 +80,27 @@ async function updateSettings(settings) {
     try {
         console.log('Updating settings in database:', settings);
         
-        const {
-            opening_time,
-            closing_time,
-            slot_duration,
-            reservation_window,
-            window_update_time
-        } = settings;
-
-        const result = await client.query(`
-            UPDATE settings 
-            SET opening_time = $1,
-                closing_time = $2,
-                slot_duration = $3,
-                reservation_window = $4,
-                window_update_time = $5,
-                updated_at = CURRENT_TIMESTAMP
-            WHERE id = (SELECT id FROM settings LIMIT 1)
-            RETURNING *
-        `, [
-            opening_time,
-            closing_time,
-            slot_duration,
-            reservation_window,
-            window_update_time
-        ]);
-
-        if (result.rowCount === 0) {
-            // No rows were updated, insert new settings
-            console.log('No existing settings found, creating new settings');
-            const insertResult = await client.query(`
-                INSERT INTO settings (
-                    opening_time,
-                    closing_time,
-                    slot_duration,
-                    reservation_window,
-                    window_update_time
-                ) VALUES ($1, $2, $3, $4, $5)
-                RETURNING *
-            `, [
-                opening_time,
-                closing_time,
-                slot_duration,
-                reservation_window,
-                window_update_time
-            ]);
-            return insertResult.rows[0];
+        // Start a transaction
+        await client.query('BEGIN');
+        
+        // Delete existing settings
+        await client.query('DELETE FROM settings');
+        
+        // Insert new settings
+        for (const [key, value] of Object.entries(settings)) {
+            await client.query(
+                'INSERT INTO settings (key, value) VALUES ($1, $2)',
+                [key, String(value)]
+            );
         }
-
-        console.log('Settings updated successfully:', result.rows[0]);
-        return result.rows[0];
+        
+        // Commit transaction
+        await client.query('COMMIT');
+        
+        console.log('Settings updated successfully');
+        return settings;
     } catch (error) {
+        await client.query('ROLLBACK');
         console.error('Database error in updateSettings:', error);
         throw error;
     } finally {
@@ -134,26 +112,32 @@ async function updateSettings(settings) {
 async function initializeSettings() {
     const client = await pool.connect();
     try {
-        const result = await client.query('SELECT * FROM settings LIMIT 1');
-        if (result.rows.length === 0) {
-            await client.query(`
-                INSERT INTO settings (
-                    opening_time,
-                    closing_time,
-                    slot_duration,
-                    reservation_window,
-                    window_update_time
-                ) VALUES (
-                    $1, $2, $3, $4, $5
-                )
-            `, [
-                defaultSettings.opening_time,
-                defaultSettings.closing_time,
-                defaultSettings.slot_duration,
-                30, // default reservation window
-                '00:00' // default window update time
-            ]);
+        const result = await client.query('SELECT COUNT(*) FROM settings');
+        if (result.rows[0].count === '0') {
+            await client.query('BEGIN');
+            
+            const initialSettings = {
+                opening_time: defaultSettings.opening_time,
+                closing_time: defaultSettings.closing_time,
+                slot_duration: defaultSettings.slot_duration,
+                reservation_window: '30',
+                window_update_time: '00:00'
+            };
+            
+            for (const [key, value] of Object.entries(initialSettings)) {
+                await client.query(
+                    'INSERT INTO settings (key, value) VALUES ($1, $2)',
+                    [key, String(value)]
+                );
+            }
+            
+            await client.query('COMMIT');
+            console.log('Initial settings created');
         }
+    } catch (error) {
+        await client.query('ROLLBACK');
+        console.error('Error initializing settings:', error);
+        throw error;
     } finally {
         client.release();
     }

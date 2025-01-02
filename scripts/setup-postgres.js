@@ -38,14 +38,8 @@ async function setupDatabase() {
             );
 
             CREATE TABLE IF NOT EXISTS settings (
-                id SERIAL PRIMARY KEY,
-                opening_time TIME NOT NULL DEFAULT '11:00',
-                closing_time TIME NOT NULL DEFAULT '22:00',
-                slot_duration INTEGER NOT NULL DEFAULT 60,
-                reservation_window INTEGER NOT NULL DEFAULT 30,
-                window_update_time TIME NOT NULL DEFAULT '00:00',
-                created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
-                updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+                key VARCHAR(255) PRIMARY KEY,
+                value TEXT NOT NULL
             );
         `);
 
