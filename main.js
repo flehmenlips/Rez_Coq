@@ -155,6 +155,13 @@ app.get('/register', (req, res) => {
     res.sendFile(path.join(__dirname, 'public', 'register.html'));
 });
 
+app.get('/customer-dashboard', (req, res) => {
+    if (!req.session?.user) {
+        return res.redirect('/login');
+    }
+    res.sendFile(path.join(__dirname, 'public', 'customer-dashboard.html'));
+});
+
 app.get('/', (req, res) => {
     // Redirect to login if not authenticated
     if (!req.session?.user) {
