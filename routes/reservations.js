@@ -7,15 +7,22 @@ const reservationRoutes = () => {
     router.get('/available-times', async (req, res) => {
         try {
             const settings = await getSettings();
+            console.log('Retrieved settings:', settings);
+            
             const openTime = settings.opening_time;
             const closeTime = settings.closing_time;
             const duration = parseInt(settings.slot_duration);
+            
+            console.log('Using values:', { openTime, closeTime, duration });
 
             // Generate time slots
             const slots = await generateTimeSlots(openTime, closeTime, duration);
+            console.log('Generated time slots:', slots);
+            
             res.json(slots);
         } catch (error) {
             console.error('Error getting available times:', error);
+            console.error('Error details:', error.stack);
             res.status(500).json({ success: false, message: 'Failed to get available times' });
         }
     });
@@ -70,29 +77,45 @@ const reservationRoutes = () => {
 // Helper function to generate time slots
 function generateTimeSlots(openTime, closeTime, duration) {
     try {
+        console.log('Generating slots with:', { openTime, closeTime, duration });
+        
+        // Ensure times are in HH:mm format
+        if (!openTime.includes(':')) openTime += ':00';
+        if (!closeTime.includes(':')) closeTime += ':00';
+        
         // Parse times using a fixed date for comparison
         const baseDate = '2000-01-01 ';
         const openDateTime = new Date(baseDate + openTime);
         const closeDateTime = new Date(baseDate + closeTime);
-        const slots = [];
         
-        // Start at opening time
+        console.log('Parsed times:', {
+            openDateTime: openDateTime.toLocaleTimeString(),
+            closeDateTime: closeDateTime.toLocaleTimeString()
+        });
+        
+        if (isNaN(openDateTime.getTime()) || isNaN(closeDateTime.getTime())) {
+            throw new Error('Invalid time format');
+        }
+        
+        const slots = [];
         let currentTime = new Date(openDateTime);
         
-        // Generate slots until closing time
-        // Subtract duration to ensure last booking ends by closing time
         while (currentTime <= new Date(closeDateTime.getTime() - duration * 60000)) {
-            slots.push(currentTime.toLocaleTimeString('en-US', {
+            const timeSlot = currentTime.toLocaleTimeString('en-US', {
                 hour: 'numeric',
                 minute: '2-digit',
                 hour12: true
-            }));
-            currentTime.setMinutes(currentTime.getMinutes() + parseInt(duration));
+            });
+            console.log('Adding slot:', timeSlot);
+            slots.push(timeSlot);
+            currentTime.setMinutes(currentTime.getMinutes() + duration);
         }
         
+        console.log('Generated slots:', slots);
         return slots;
     } catch (error) {
-        console.error('Error generating time slots:', error);
+        console.error('Error in generateTimeSlots:', error);
+        console.error('Stack:', error.stack);
         throw error;
     }
 }

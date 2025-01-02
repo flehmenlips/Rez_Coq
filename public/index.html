@@ -219,15 +219,29 @@
         timeSelect.disabled = true;
         
         try {
+            console.log('Fetching available times...');
             const response = await fetch('/api/reservations/available-times');
+            console.log('Response status:', response.status);
+            
             if (!response.ok) {
-                throw new Error('Failed to fetch available times');
+                const errorText = await response.text();
+                console.error('Server response:', errorText);
+                throw new Error(`Failed to fetch available times: ${response.status} ${errorText}`);
             }
             
             const times = await response.json();
-            console.log('Available times:', times); // Debug log
+            console.log('Available times:', times);
+            
+            if (!Array.isArray(times)) {
+                throw new Error('Server returned invalid time slot format');
+            }
             
             timeSelect.innerHTML = '<option value="">Select a time</option>';
+            
+            if (times.length === 0) {
+                timeSelect.innerHTML = '<option value="">No times available</option>';
+                return;
+            }
             
             times.forEach(time => {
                 const option = document.createElement('option');
@@ -237,7 +251,7 @@
             });
         } catch (error) {
             console.error('Error fetching times:', error);
-            timeSelect.innerHTML = '<option value="">Error loading times</option>';
+            timeSelect.innerHTML = `<option value="">Error: ${error.message}</option>`;
         } finally {
             timeSelect.disabled = false;
         }
