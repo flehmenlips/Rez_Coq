@@ -9,10 +9,6 @@ const { sendEmail } = require('./utils/email');
 const session = require('express-session');
 const cookieParser = require('cookie-parser');
 const auth = require('./middleware/auth');
-const authRoutes = require('./routes/auth')(pool);
-const reservationRoutes = require('./routes/reservations')();
-const settingsRoutes = require('./routes/settings')();
-const adminRoutes = require('./routes/admin')();
 const ConnectPgSimple = require('connect-pg-simple')(session);
 const bcrypt = require('bcrypt');
 
@@ -29,6 +25,12 @@ pool.on('error', (err) => {
     console.error('Unexpected error on idle client', err);
     process.exit(-1);
 });
+
+// Initialize routes after pool is created
+const authRoutes = require('./routes/auth')(pool);
+const reservationRoutes = require('./routes/reservations')();
+const settingsRoutes = require('./routes/settings')();
+const adminRoutes = require('./routes/admin')();
 
 // Test database connection
 pool.query('SELECT NOW()', (err, res) => {
