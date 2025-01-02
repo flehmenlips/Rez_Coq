@@ -1,7 +1,6 @@
 const express = require('express');
 const router = express.Router();
 const { getSettings, updateSettings } = require('../utils/db-queries');
-const { requireAdmin } = require('../middleware/auth');
 
 const settingsRoutes = () => {
     // Get settings
@@ -16,8 +15,16 @@ const settingsRoutes = () => {
     });
 
     // Update settings (admin only)
-    router.post('/', requireAdmin, async (req, res) => {
+    router.post('/', async (req, res) => {
         try {
+            // Check if user is admin
+            if (!req.session?.user?.role === 'admin') {
+                return res.status(403).json({
+                    success: false,
+                    message: 'Admin access required'
+                });
+            }
+
             const {
                 opening_time,
                 closing_time,
