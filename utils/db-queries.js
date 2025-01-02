@@ -93,8 +93,30 @@ async function updateSettings(settings) {
 
 // Initialize settings if they don't exist
 async function initializeSettings() {
-    for (const [key, value] of Object.entries(defaultSettings)) {
-        await updateSetting(key, value.toString());
+    const client = await pool.connect();
+    try {
+        const result = await client.query('SELECT * FROM settings LIMIT 1');
+        if (result.rows.length === 0) {
+            await client.query(`
+                INSERT INTO settings (
+                    opening_time,
+                    closing_time,
+                    slot_duration,
+                    reservation_window,
+                    window_update_time
+                ) VALUES (
+                    $1, $2, $3, $4, $5
+                )
+            `, [
+                defaultSettings.opening_time,
+                defaultSettings.closing_time,
+                defaultSettings.slot_duration,
+                30, // default reservation window
+                '00:00' // default window update time
+            ]);
+        }
+    } finally {
+        client.release();
     }
 }
 
@@ -104,6 +126,6 @@ module.exports = {
     getReservations,
     createReservation,
     getSettings,
-    updateSetting,
+    updateSettings,
     initializeSettings
 }; 
