@@ -8,6 +8,7 @@ const authRoutes = (pool) => {
         const { username, password, type } = req.body;
         
         try {
+            console.log('Login attempt for:', username);
             const result = await pool.query(
                 'SELECT * FROM users WHERE username = $1',
                 [username]
@@ -16,17 +17,20 @@ const authRoutes = (pool) => {
             const user = result.rows[0];
             
             if (!user) {
+                console.log('User not found:', username);
                 return res.json({ success: false, message: 'User not found' });
             }
             
             // Verify password
             const validPassword = await bcrypt.compare(password, user.password_hash);
             if (!validPassword) {
+                console.log('Invalid password for user:', username);
                 return res.json({ success: false, message: 'Invalid password' });
             }
             
             // Check role matches type
             if (type === 'admin' && user.role !== 'admin') {
+                console.log('Unauthorized admin access attempt for:', username);
                 return res.json({ success: false, message: 'Not authorized as admin' });
             }
             
@@ -37,6 +41,9 @@ const authRoutes = (pool) => {
                 role: user.role,
                 email: user.email
             };
+            
+            console.log('Login successful for:', username);
+            console.log('Session data:', req.session);
             
             res.json({ 
                 success: true, 
