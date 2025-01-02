@@ -2,17 +2,21 @@
 async function loadSettings() {
     try {
         const response = await fetch('/api/settings');
-        if (!response.ok) throw new Error('Failed to load settings');
         const settings = await response.json();
         
-        // Populate form fields
-        settings.forEach(setting => {
-            const input = document.getElementById(setting.key);
-            if (input) input.value = setting.value;
+        console.log('Loaded settings:', settings);
+        
+        // Populate form fields with settings values
+        const inputs = document.querySelectorAll('#settingsForm input');
+        inputs.forEach(input => {
+            const settingValue = settings[input.id];
+            if (settingValue !== undefined) {
+                input.value = settingValue;
+            }
         });
     } catch (error) {
         console.error('Error loading settings:', error);
-        alert('Failed to load settings');
+        alert('Error loading settings: ' + error.message);
     }
 }
 
@@ -65,12 +69,15 @@ document.getElementById('settingsForm').addEventListener('submit', async (e) => 
     
     try {
         const formData = new FormData(e.target);
-        const settings = {};
+        const settings = {
+            opening_time: formData.get('opening_time'),
+            closing_time: formData.get('closing_time'),
+            slot_duration: formData.get('slot_duration'),
+            reservation_window: formData.get('reservation_window'),
+            window_update_time: formData.get('window_update_time')
+        };
         
-        // Convert form data to object
-        for (let [key, value] of formData.entries()) {
-            settings[key] = value;
-        }
+        console.log('Saving settings:', settings);
         
         const response = await fetch('/api/settings', {
             method: 'POST',
@@ -79,20 +86,26 @@ document.getElementById('settingsForm').addEventListener('submit', async (e) => 
             },
             body: JSON.stringify(settings)
         });
-
-        if (!response.ok) throw new Error('Failed to save settings');
+        
+        if (!response.ok) {
+            const error = await response.text();
+            throw new Error(error);
+        }
         
         const result = await response.json();
-        alert('Settings saved successfully');
-        
-        // Reload settings to confirm changes
-        loadSettings();
-        
+        if (result.success) {
+            alert('Settings saved successfully!');
+        } else {
+            throw new Error(result.message || 'Failed to save settings');
+        }
     } catch (error) {
         console.error('Error saving settings:', error);
-        alert('Failed to save settings');
+        alert('Error saving settings: ' + error.message);
     }
 });
+
+// Load settings on page load
+document.addEventListener('DOMContentLoaded', loadSettings);
 
 // Load data on page load
 document.addEventListener('DOMContentLoaded', () => {
