@@ -143,9 +143,6 @@ app.use(session({
     }
 }));
 
-// Auth middleware
-app.use(auth);
-
 // Routes
 app.use('/api/auth', authRoutes(pool));
 app.use('/api/reservations', reservationRoutes());
