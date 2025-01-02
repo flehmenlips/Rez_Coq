@@ -7,7 +7,12 @@ const settingsRoutes = () => {
     router.get('/', async (req, res) => {
         try {
             const settings = await getSettings();
-            res.json(settings);
+            // Convert settings object to array format
+            const settingsArray = Object.entries(settings).map(([key, value]) => ({
+                key,
+                value
+            }));
+            res.json(settingsArray);
         } catch (error) {
             console.error('Error fetching settings:', error);
             res.status(500).json({ success: false, message: 'Failed to fetch settings' });

@@ -7,7 +7,7 @@ const reservationRoutes = () => {
     router.get('/', async (req, res) => {
         try {
             const reservations = await getReservations();
-            res.json({ success: true, reservations });
+            res.json(reservations || []);
         } catch (error) {
             console.error('Error fetching reservations:', error);
             res.status(500).json({ success: false, message: 'Failed to fetch reservations' });
@@ -26,7 +26,7 @@ const reservationRoutes = () => {
             
             const userEmail = req.session.user.email;
             const reservations = await getReservations(userEmail);
-            res.json(reservations);
+            res.json(reservations || []);
         } catch (error) {
             console.error('Error fetching user reservations:', error);
             res.status(500).json({ 
