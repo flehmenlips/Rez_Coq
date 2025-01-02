@@ -16,8 +16,10 @@ function auth(req, res, next) {
         isAPI: req.path.startsWith('/api/')
     });
 
-    // Skip auth check for login and register pages
-    if (req.path === '/login' || req.path === '/register') {
+    // Skip auth check for login, register pages and registration API
+    if (req.path === '/login' || 
+        req.path === '/register' || 
+        req.path === '/api/auth/register') {
         return next();
     }
 
