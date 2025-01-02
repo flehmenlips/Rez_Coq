@@ -1,5 +1,13 @@
 const pool = require('./db');
 
+const defaultSettings = {
+    daily_max_guests: 100,
+    max_party_size: 10,
+    opening_time: '11:00',
+    closing_time: '22:00',
+    slot_duration: 60
+};
+
 // User queries
 async function getUserByUsername(username) {
     const result = await pool.query(
@@ -19,10 +27,17 @@ async function createUser(username, passwordHash, email, role = 'customer') {
 }
 
 // Reservation queries
-async function getReservations() {
-    const result = await pool.query(
-        'SELECT * FROM reservations ORDER BY date, time'
-    );
+async function getReservations(userEmail = null) {
+    let query = 'SELECT * FROM reservations';
+    const params = [];
+    
+    if (userEmail) {
+        query += ' WHERE email = $1';
+        params.push(userEmail);
+    }
+    
+    query += ' ORDER BY date, time';
+    const result = await pool.query(query, params);
     return result.rows;
 }
 
@@ -40,10 +55,13 @@ async function createReservation(data) {
 // Settings queries
 async function getSettings() {
     const result = await pool.query('SELECT * FROM settings');
-    return result.rows.reduce((acc, row) => {
+    const settings = result.rows.reduce((acc, row) => {
         acc[row.key] = row.value;
         return acc;
     }, {});
+
+    // Merge with default settings
+    return { ...defaultSettings, ...settings };
 }
 
 async function updateSetting(key, value) {
@@ -55,11 +73,19 @@ async function updateSetting(key, value) {
     );
 }
 
+// Initialize settings if they don't exist
+async function initializeSettings() {
+    for (const [key, value] of Object.entries(defaultSettings)) {
+        await updateSetting(key, value.toString());
+    }
+}
+
 module.exports = {
     getUserByUsername,
     createUser,
     getReservations,
     createReservation,
     getSettings,
-    updateSetting
+    updateSetting,
+    initializeSettings
 }; 

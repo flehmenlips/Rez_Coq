@@ -53,6 +53,11 @@ async function initializeDatabase() {
         // Create default admin if needed
         await createAdminIfNeeded();
         
+        // Initialize settings
+        const { initializeSettings } = require('./utils/db-queries');
+        await initializeSettings();
+        console.log('Settings initialized');
+        
     } catch (error) {
         console.error('Database initialization error:', error);
         // Don't exit, just log the error
