@@ -14,6 +14,28 @@ const reservationRoutes = () => {
         }
     });
 
+    // Get user's reservations
+    router.get('/my-reservations', async (req, res) => {
+        try {
+            if (!req.session?.user?.email) {
+                return res.status(400).json({ 
+                    success: false, 
+                    message: 'User email not found in session' 
+                });
+            }
+            
+            const userEmail = req.session.user.email;
+            const reservations = await getReservations(userEmail);
+            res.json(reservations);
+        } catch (error) {
+            console.error('Error fetching user reservations:', error);
+            res.status(500).json({ 
+                success: false, 
+                message: 'Failed to fetch your reservations' 
+            });
+        }
+    });
+
     // Create new reservation
     router.post('/', async (req, res) => {
         try {
