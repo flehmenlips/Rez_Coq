@@ -9,9 +9,10 @@ const { sendEmail } = require('./utils/email');
 const session = require('express-session');
 const cookieParser = require('cookie-parser');
 const auth = require('./middleware/auth');
-const authRoutes = require('./routes/auth');
-const reservationRoutes = require('./routes/reservations');
-const settingsRoutes = require('./routes/settings');
+const authRoutes = require('./routes/auth')();
+const reservationRoutes = require('./routes/reservations')();
+const settingsRoutes = require('./routes/settings')();
+const adminRoutes = require('./routes/admin')();
 const ConnectPgSimple = require('connect-pg-simple')(session);
 const bcrypt = require('bcrypt');
 
@@ -144,9 +145,10 @@ app.use(session({
 }));
 
 // Routes
-app.use('/api/auth', authRoutes(pool));
-app.use('/api/reservations', reservationRoutes());
-app.use('/api/settings', settingsRoutes());
+app.use('/api/auth', authRoutes);
+app.use('/api/reservations', reservationRoutes);
+app.use('/api/settings', settingsRoutes);
+app.use('/api/admin', adminRoutes);
 
 // Serve static HTML pages
 app.get('/login', (req, res) => {

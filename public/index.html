@@ -221,81 +221,76 @@
     <script>
     // Prevent form from submitting normally
     document.getElementById('reservationForm').addEventListener('submit', async (e) => {
-        e.preventDefault();  // This is crucial
+        e.preventDefault();
         
-        // Disable form to prevent double submission
         const form = e.target;
         const submitButton = form.querySelector('button[type="submit"]');
-        const allInputs = form.querySelectorAll('input, select, button');
-        
-        // Disable all form elements
-        allInputs.forEach(input => input.disabled = true);
-        if (submitButton) {
-            submitButton.innerHTML = 'Submitting...';
-        }
-        
-        const formData = {
-            date: document.getElementById('date').value,
-            time: document.getElementById('time').value,
-            guests: document.getElementById('guests').value,
-            email: document.getElementById('email').value,
-            name: document.getElementById('name').value
-        };
+        const originalButtonText = submitButton.innerHTML;
         
         try {
+            // Disable form and show loading state
+            submitButton.disabled = true;
+            submitButton.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Processing...';
+            
+            const formData = new FormData(form);
+            const data = Object.fromEntries(formData.entries());
+            
+            // Format date for display
+            const formattedDate = new Date(data.date).toLocaleDateString('en-US', {
+                weekday: 'long',
+                year: 'numeric',
+                month: 'long',
+                day: 'numeric'
+            });
+            
             const response = await fetch('/api/reservations', {
                 method: 'POST',
                 headers: {
-                    'Content-Type': 'application/json',
-                    'Accept': 'application/json'  // Added this to prevent raw JSON display
+                    'Content-Type': 'application/json'
                 },
-                body: JSON.stringify(formData)
+                body: JSON.stringify(data)
             });
+            
+            if (!response.ok) {
+                const errorData = await response.json();
+                throw new Error(errorData.message || 'Failed to create reservation');
+            }
             
             const result = await response.json();
             
-            if (response.ok && result.success) {
-                // Format date for display
-                const formattedDate = new Date(formData.date).toLocaleDateString('en-US', {
-                    weekday: 'long',
-                    year: 'numeric',
-                    month: 'long',
-                    day: 'numeric'
-                });
-
-                // Update modal content
+            if (result.success) {
+                // Update confirmation modal content
                 document.getElementById('reservationDetails').innerHTML = `
                     <div class="reservation-details">
                         <p><strong>Date:</strong> ${formattedDate}</p>
-                        <p><strong>Time:</strong> ${formData.time}</p>
-                        <p><strong>Number of Guests:</strong> ${formData.guests}</p>
-                        <p><strong>Reserved for:</strong> ${formData.name}</p>
-                        <p><strong>Confirmation Email:</strong> ${formData.email}</p>
+                        <p><strong>Time:</strong> ${data.time}</p>
+                        <p><strong>Number of Guests:</strong> ${data.guests}</p>
+                        <p><strong>Reserved for:</strong> ${data.name}</p>
+                        <p><strong>Confirmation Email:</strong> ${data.email}</p>
                         <p class="text-muted mt-3">A confirmation email will be sent to your address.</p>
-                        <p class="text-muted">Reservation ID: #${result.id}</p>
+                        <p class="text-muted">Reservation ID: #${result.reservation.id}</p>
                     </div>
                 `;
                 
-                // Show the success modal
+                // Show confirmation modal
                 const modal = new bootstrap.Modal(document.getElementById('confirmationModal'));
                 modal.show();
                 
                 // Reset form
                 form.reset();
             } else {
-                throw new Error(result.message || 'Error creating reservation');
+                throw new Error(result.message || 'Failed to create reservation');
             }
         } catch (error) {
             console.error('Error:', error);
+            // Show error in modal
+            document.getElementById('errorMessage').textContent = error.message;
             const errorModal = new bootstrap.Modal(document.getElementById('errorModal'));
-            document.getElementById('errorMessage').textContent = error.message || 'Error creating reservation. Please try again.';
             errorModal.show();
         } finally {
-            // Re-enable all form elements
-            allInputs.forEach(input => input.disabled = false);
-            if (submitButton) {
-                submitButton.innerHTML = 'Submit';
-            }
+            // Restore button state
+            submitButton.disabled = false;
+            submitButton.innerHTML = originalButtonText;
         }
     });
 
@@ -315,7 +310,7 @@
             const dateInput = document.getElementById('date');
             const today = new Date();
             const maxDate = new Date();
-            maxDate.setDate(today.getDate() + settings.reservation_window);
+            maxDate.setDate(today.getDate() + parseInt(settings.reservation_window));
             
             // Set min date to today
             dateInput.min = today.toISOString().split('T')[0];
@@ -327,6 +322,11 @@
                 max: dateInput.max,
                 window: settings.reservation_window
             });
+
+            // Update guests input max value
+            const guestsInput = document.getElementById('guests');
+            guestsInput.max = settings.max_party_size;
+            guestsInput.title = `Maximum party size is ${settings.max_party_size}`;
         } catch (error) {
             console.error('Error setting up date picker:', error);
         }
