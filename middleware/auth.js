@@ -5,6 +5,7 @@ const auth = (req, res, next) => {
         '/api/auth/login',
         '/api/auth/register',
         '/api/auth/logout',
+        '/api/auth/check-session',
         '/login',
         '/register',
         '/css/',
@@ -13,6 +14,16 @@ const auth = (req, res, next) => {
         '/favicon.ico'
     ];
 
+    console.log('Auth middleware:', {
+        path: req.path,
+        method: req.method,
+        isXHR: req.xhr,
+        sessionID: req.sessionID,
+        hasSession: !!req.session,
+        hasUser: !!req.session?.user,
+        userRole: req.session?.user?.role
+    });
+
     // Skip auth for public paths
     if (publicPaths.some(path => req.path === path || req.path.startsWith(path))) {
         return next();
@@ -20,6 +31,7 @@ const auth = (req, res, next) => {
 
     // Check if user is authenticated
     if (!req.session?.user) {
+        console.log('No user session found, redirecting to login');
         if (req.xhr || req.path.startsWith('/api/')) {
             return res.status(401).json({
                 success: false,
@@ -32,6 +44,7 @@ const auth = (req, res, next) => {
     // For admin routes, check admin role
     if (req.path.startsWith('/api/admin') || req.path === '/dashboard') {
         if (req.session.user.role !== 'admin') {
+            console.log('Non-admin user attempting to access admin route');
             if (req.xhr || req.path.startsWith('/api/')) {
                 return res.status(403).json({
                     success: false,
@@ -42,6 +55,8 @@ const auth = (req, res, next) => {
         }
     }
 
+    // Add user to locals for views
+    res.locals.user = req.session.user;
     next();
 };
 

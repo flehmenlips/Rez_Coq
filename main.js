@@ -38,6 +38,7 @@ app.use(session({
     resave: false,
     saveUninitialized: false,
     name: 'rez_coq_session',
+    proxy: true,
     cookie: {
         secure: process.env.NODE_ENV === 'production',
         httpOnly: true,
@@ -48,9 +49,16 @@ app.use(session({
 
 // Add session debug middleware
 app.use((req, res, next) => {
-    console.log('Session data:', req.session);
+    console.log('Session debug:', {
+        id: req.sessionID,
+        user: req.session?.user,
+        cookie: req.session?.cookie
+    });
     next();
 });
+
+// Trust proxy for secure cookies behind reverse proxy
+app.set('trust proxy', 1);
 
 // Serve static files that don't require auth
 app.use(express.static(path.join(__dirname, 'public'), {
