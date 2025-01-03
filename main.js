@@ -137,17 +137,16 @@ app.use(session({
         tableName: 'session',
         pruneSessionInterval: 60 // Cleanup every minute
     }),
-    secret: process.env.SESSION_SECRET,
-    resave: false,
+    secret: process.env.SESSION_SECRET || 'your-secret-key',
+    resave: true,
     saveUninitialized: false,
-    name: 'rez_coq_sid', // Custom cookie name
+    name: 'rez_coq_sid',
     cookie: {
-        secure: process.env.NODE_ENV === 'production', // Only send cookie over HTTPS in production
+        secure: process.env.NODE_ENV === 'production',
         httpOnly: true,
-        sameSite: 'strict',
-        maxAge: 8 * 60 * 60 * 1000 // 8 hours instead of 24
-    },
-    rolling: true // Reset maxAge on every response
+        sameSite: 'lax',
+        maxAge: 8 * 60 * 60 * 1000 // 8 hours
+    }
 }));
 
 // Add security headers middleware
@@ -156,35 +155,26 @@ app.use((req, res, next) => {
         'Cache-Control': 'no-store, no-cache, must-revalidate, proxy-revalidate',
         'Pragma': 'no-cache',
         'Expires': '0',
-        'Surrogate-Control': 'no-store',
-        'X-Frame-Options': 'DENY'
+        'Surrogate-Control': 'no-store'
     });
     next();
 });
 
 // Session check middleware
 app.use((req, res, next) => {
-    if (req.session && req.session.user) {
-        // Check if session is expired
-        const now = new Date().getTime();
-        const sessionStart = new Date(req.session.created || now).getTime();
-        const maxAge = 8 * 60 * 60 * 1000; // 8 hours in milliseconds
-
-        if (now - sessionStart > maxAge) {
-            req.session.destroy((err) => {
-                if (err) {
-                    console.error('Session destruction error:', err);
-                }
-                if (req.xhr || req.path.startsWith('/api/')) {
-                    return res.status(401).json({ message: 'Session expired' });
-                }
-                return res.redirect('/login');
+    if (req.session) {
+        // Ensure session has created timestamp
+        if (req.session.user && !req.session.created) {
+            req.session.created = new Date().getTime();
+        }
+        
+        // Log session data for debugging
+        if (req.session.user) {
+            console.log('Active session:', {
+                id: req.session.id,
+                user: req.session.user,
+                created: req.session.created
             });
-        } else {
-            // Update session timestamp if needed
-            if (!req.session.created) {
-                req.session.created = now;
-            }
         }
     }
     next();

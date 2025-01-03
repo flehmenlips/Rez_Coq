@@ -8,17 +8,7 @@ const authRoutes = (pool) => {
         const { username, password, type } = req.body;
         
         try {
-            console.log('Login attempt for:', username);
-            
-            // Clear any existing session first
-            if (req.session) {
-                await new Promise((resolve, reject) => {
-                    req.session.destroy((err) => {
-                        if (err) reject(err);
-                        resolve();
-                    });
-                });
-            }
+            console.log('Login attempt for:', username, 'type:', type);
             
             const result = await pool.query(
                 'SELECT * FROM users WHERE username = $1',
@@ -44,50 +34,48 @@ const authRoutes = (pool) => {
                 console.log('Unauthorized admin access attempt for:', username);
                 return res.json({ success: false, message: 'Not authorized as admin' });
             }
-            
-            // Create new session
-            req.session.regenerate(async (err) => {
-                if (err) {
-                    console.error('Session regeneration error:', err);
-                    return res.json({ success: false, message: 'Login failed' });
-                }
-                
-                // Set session data
-                req.session.user = {
-                    id: user.id,
-                    username: user.username,
-                    role: user.role,
-                    email: user.email
-                };
-                req.session.created = new Date().getTime();
-                
-                // Save session before responding
+
+            // Set session data directly
+            req.session.user = {
+                id: user.id,
+                username: user.username,
+                role: user.role,
+                email: user.email
+            };
+            req.session.created = new Date().getTime();
+
+            // Save session
+            try {
                 await new Promise((resolve, reject) => {
                     req.session.save((err) => {
                         if (err) {
                             console.error('Session save error:', err);
                             reject(err);
-                            return;
+                        } else {
+                            resolve();
                         }
-                        resolve();
                     });
-                }).catch(err => {
-                    return res.json({ success: false, message: 'Login failed' });
                 });
-                
+
                 console.log('Login successful for:', username);
-                console.log('Session data:', req.session);
-                
-                res.json({ 
+                console.log('Session data:', {
+                    id: req.session.id,
+                    user: req.session.user,
+                    created: req.session.created
+                });
+
+                return res.json({ 
                     success: true, 
                     role: user.role,
                     message: 'Login successful' 
                 });
-            });
-            
+            } catch (saveError) {
+                console.error('Failed to save session:', saveError);
+                return res.json({ success: false, message: 'Login failed - session error' });
+            }
         } catch (error) {
             console.error('Login error:', error);
-            res.json({ success: false, message: 'Login failed' });
+            return res.json({ success: false, message: 'Login failed - server error' });
         }
     });
     
