@@ -3,16 +3,24 @@ const express = require('express');
 const session = require('express-session');
 const cookieParser = require('cookie-parser');
 const path = require('path');
+const { Pool } = require('pg');
+const ConnectPgSimple = require('connect-pg-simple')(session);
 const { testConnection } = require('./utils/db');
 const { initializeDatabase } = require('./utils/db-queries');
 const authRoutes = require('./routes/auth');
 const adminRoutes = require('./routes/admin');
 const settingsRoutes = require('./routes/settings');
 const reservationRoutes = require('./routes/reservations');
-const auth = require('./middleware/auth');
+const { auth } = require('./middleware/auth');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
+
+// Create pool for session store
+const pool = new Pool({
+    connectionString: process.env.DATABASE_URL,
+    ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false
+});
 
 // Middleware
 app.use(express.json());
@@ -21,6 +29,11 @@ app.use(cookieParser());
 
 // Session configuration
 app.use(session({
+    store: new ConnectPgSimple({
+        pool: pool,
+        tableName: 'session',
+        createTableIfMissing: true
+    }),
     secret: process.env.SESSION_SECRET || 'your-secret-key',
     resave: false,
     saveUninitialized: false,
@@ -75,7 +88,7 @@ app.get('/user-settings', (req, res) => {
 // API routes (all require authentication)
 app.use('/api/settings', settingsRoutes);
 app.use('/api/reservations', reservationRoutes);
-app.use('/api/admin', adminRoutes());
+app.use('/api/admin', adminRoutes);
 
 // Error handling middleware
 app.use((err, req, res, next) => {
