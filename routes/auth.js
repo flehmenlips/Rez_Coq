@@ -1,264 +1,167 @@
 const express = require('express');
 const bcrypt = require('bcrypt');
 const router = express.Router();
+const { query } = require('../utils/db');
 
-const authRoutes = (pool) => {
-    // Login route
-    router.post('/login', async (req, res) => {
+// Login route
+router.post('/login', async (req, res) => {
+    try {
         const { username, password, type } = req.body;
-        
-        try {
-            console.log('Login attempt for:', username);
-            console.log('Session before login:', {
-                sessionID: req.sessionID,
-                hasSession: !!req.session,
-                user: req.session?.user
-            });
-            
-            // Validate input
-            if (!username || !password) {
-                return res.status(400).json({
-                    success: false,
-                    message: 'Username and password are required'
-                });
-            }
-            
-            const result = await pool.query(
-                'SELECT * FROM users WHERE username = $1',
-                [username]
-            );
-            
-            const user = result.rows[0];
-            
-            if (!user) {
-                console.log('User not found:', username);
-                return res.status(401).json({
-                    success: false,
-                    message: 'Invalid username or password'
-                });
-            }
-            
-            // Verify password
-            const validPassword = await bcrypt.compare(password, user.password_hash);
-            if (!validPassword) {
-                console.log('Invalid password for user:', username);
-                return res.status(401).json({
-                    success: false,
-                    message: 'Invalid username or password'
-                });
-            }
-            
-            // Check role matches type
-            if (type === 'admin' && user.role !== 'admin') {
-                console.log('Unauthorized admin access attempt for:', username);
-                return res.status(403).json({
-                    success: false,
-                    message: 'Not authorized as admin'
-                });
-            }
+        console.log('Login attempt:', { username, type });
 
-            // Update last login time
-            await pool.query(
-                'UPDATE users SET last_login = CURRENT_TIMESTAMP WHERE id = $1',
-                [user.id]
-            );
+        // Get user from database
+        const result = await query(
+            'SELECT * FROM users WHERE (username = $1 OR email = $1) AND role = $2',
+            [username, type === 'admin' ? 'admin' : 'customer']
+        );
 
-            // Regenerate session
-            await new Promise((resolve, reject) => {
-                req.session.regenerate((err) => {
-                    if (err) {
-                        console.error('Session regeneration error:', err);
-                        reject(err);
-                    } else {
-                        resolve();
-                    }
-                });
+        if (result.rows.length === 0) {
+            console.log('User not found or incorrect role');
+            return res.status(401).json({
+                success: false,
+                message: 'Invalid username or password'
             });
-            
-            // Set session data
-            req.session.user = {
+        }
+
+        const user = result.rows[0];
+
+        // Check password
+        const validPassword = await bcrypt.compare(password, user.password_hash);
+        if (!validPassword) {
+            console.log('Invalid password');
+            return res.status(401).json({
+                success: false,
+                message: 'Invalid username or password'
+            });
+        }
+
+        // Update last login
+        await query(
+            'UPDATE users SET last_login = CURRENT_TIMESTAMP WHERE id = $1',
+            [user.id]
+        );
+
+        // Set session data
+        req.session.user = {
+            id: user.id,
+            username: user.username,
+            role: user.role,
+            email: user.email
+        };
+
+        console.log('Login successful:', { userId: user.id, role: user.role });
+
+        res.json({
+            success: true,
+            message: 'Login successful',
+            user: {
                 id: user.id,
                 username: user.username,
                 role: user.role,
                 email: user.email
-            };
+            }
+        });
+    } catch (error) {
+        console.error('Login error:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Login failed',
+            error: error.message
+        });
+    }
+});
 
-            // Save session explicitly and wait for completion
-            await new Promise((resolve, reject) => {
-                req.session.save((err) => {
-                    if (err) {
-                        console.error('Session save error:', err);
-                        reject(err);
-                    } else {
-                        resolve();
-                    }
-                });
+// Register route
+router.post('/register', async (req, res) => {
+    try {
+        const { username, password, email } = req.body;
+
+        // Check if username exists
+        const existingUser = await query(
+            'SELECT * FROM users WHERE username = $1 OR email = $2',
+            [username, email]
+        );
+
+        if (existingUser.rows.length > 0) {
+            return res.status(400).json({
+                success: false,
+                message: 'Username or email already exists'
             });
-            
-            console.log('Login successful for:', username);
-            console.log('Session after login:', {
-                sessionID: req.sessionID,
-                hasSession: !!req.session,
-                user: req.session?.user,
-                cookie: req.session.cookie
-            });
-            
-            // Send response only after session is saved
-            return res.status(200).json({ 
-                success: true, 
+        }
+
+        // Hash password
+        const salt = await bcrypt.genSalt(10);
+        const passwordHash = await bcrypt.hash(password, salt);
+
+        // Create user
+        const result = await query(
+            `INSERT INTO users (username, password_hash, email, role, verified)
+             VALUES ($1, $2, $3, $4, $5)
+             RETURNING id, username, email, role`,
+            [username, passwordHash, email, 'customer', false]
+        );
+
+        const user = result.rows[0];
+
+        // Set session data
+        req.session.user = {
+            id: user.id,
+            username: user.username,
+            role: user.role,
+            email: user.email
+        };
+
+        res.json({
+            success: true,
+            message: 'Registration successful',
+            user: {
+                id: user.id,
+                username: user.username,
                 role: user.role,
-                message: 'Login successful',
-                sessionID: req.sessionID // Add this for debugging
-            });
-            
-        } catch (error) {
-            console.error('Login error:', error);
+                email: user.email
+            }
+        });
+    } catch (error) {
+        console.error('Registration error:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Registration failed',
+            error: error.message
+        });
+    }
+});
+
+// Logout route
+router.post('/logout', (req, res) => {
+    req.session.destroy((err) => {
+        if (err) {
+            console.error('Logout error:', err);
             return res.status(500).json({
                 success: false,
-                message: 'Internal server error',
-                error: process.env.NODE_ENV === 'development' ? error.message : undefined
+                message: 'Logout failed',
+                error: err.message
             });
         }
-    });
-    
-    // Register route
-    router.post('/register', async (req, res) => {
-        try {
-            const { username, password, email } = req.body;
-            
-            // Check if user exists
-            const existingUser = await pool.query(
-                'SELECT id FROM users WHERE username = $1 OR email = $2',
-                [username, email]
-            );
-            
-            if (existingUser.rows.length > 0) {
-                return res.json({
-                    success: false,
-                    message: 'Username or email already exists'
-                });
-            }
-
-            // Hash password
-            const passwordHash = await bcrypt.hash(password, 10);
-
-            // Insert new user
-            const result = await pool.query(
-                `INSERT INTO users (username, password_hash, email, role, created_at)
-                 VALUES ($1, $2, $3, 'customer', CURRENT_TIMESTAMP)
-                 RETURNING id`,
-                [username, passwordHash, email]
-            );
-
-            res.json({
-                success: true,
-                message: 'Registration successful',
-                id: result.rows[0].id
-            });
-        } catch (error) {
-            console.error('Registration error:', error);
-            res.json({ success: false, message: 'Error creating account' });
-        }
-    });
-
-    // Check session route
-    router.get('/check-session', (req, res) => {
         res.json({
-            authenticated: !!req.session?.user,
-            user: req.session?.user || null
+            success: true,
+            message: 'Logout successful'
         });
     });
+});
 
-    // Account settings route
-    router.get('/account', async (req, res) => {
-        try {
-            const result = await pool.query(
-                `SELECT id, username, email, role, created_at, last_login 
-                 FROM users WHERE id = $1`,
-                [req.session.user.id]
-            );
+// Check session route
+router.get('/check-session', (req, res) => {
+    if (req.session?.user) {
+        res.json({
+            success: true,
+            user: req.session.user
+        });
+    } else {
+        res.status(401).json({
+            success: false,
+            message: 'No active session'
+        });
+    }
+});
 
-            if (result.rows.length === 0) {
-                return res.json({ success: false, message: 'User not found' });
-            }
-
-            res.json({
-                success: true,
-                user: result.rows[0]
-            });
-        } catch (error) {
-            console.error('Account settings error:', error);
-            res.json({ success: false, message: 'Error retrieving account settings' });
-        }
-    });
-
-    // Logout route
-    router.post('/logout', async (req, res) => {
-        if (req.session) {
-            try {
-                // First, clear the session data
-                req.session.user = null;
-                
-                // Then destroy the session
-                await new Promise((resolve, reject) => {
-                    req.session.destroy((err) => {
-                        if (err) reject(err);
-                        resolve();
-                    });
-                });
-                
-                // Clear session cookie with default name
-                res.clearCookie('connect.sid', {
-                    path: '/',
-                    httpOnly: true,
-                    secure: process.env.NODE_ENV === 'production'
-                });
-                
-                res.json({ 
-                    success: true, 
-                    message: 'Logged out successfully' 
-                });
-            } catch (err) {
-                console.error('Logout error:', err);
-                return res.status(500).json({ 
-                    success: false, 
-                    message: 'Logout failed' 
-                });
-            }
-        } else {
-            // If no session exists, just send success response
-            res.json({ 
-                success: true, 
-                message: 'Already logged out' 
-            });
-        }
-    });
-
-    // Get current user info
-    router.get('/user', async (req, res) => {
-        try {
-            if (!req.session?.user) {
-                return res.status(401).json({
-                    success: false,
-                    message: 'Not authenticated'
-                });
-            }
-            
-            const { id, username, role, email } = req.session.user;
-            res.json({
-                success: true,
-                user: { id, username, role, email }
-            });
-        } catch (error) {
-            console.error('Error fetching user info:', error);
-            res.status(500).json({
-                success: false,
-                message: 'Error fetching user information'
-            });
-        }
-    });
-    
-    return router;
-};
-
-module.exports = authRoutes; 
+module.exports = router; 

@@ -1,24 +1,19 @@
 console.log('Login script loaded');
 
-let currentLoginType = 'customer';
-
 // Handle login type selection
-document.querySelectorAll('.login-type-selector .btn').forEach(button => {
-    button.addEventListener('click', (e) => {
-        // Update buttons
-        document.querySelectorAll('.login-type-selector .btn').forEach(btn => {
-            btn.classList.remove('active');
-        });
-        e.target.classList.add('active');
+const loginTypeButtons = document.querySelectorAll('.login-type-selector .btn');
+let selectedType = 'customer'; // Default type
 
-        // Update login type
-        currentLoginType = e.target.dataset.type;
-
+loginTypeButtons.forEach(button => {
+    button.addEventListener('click', () => {
+        loginTypeButtons.forEach(btn => btn.classList.remove('active'));
+        button.classList.add('active');
+        selectedType = button.dataset.type;
+        console.log('Login type selected:', selectedType);
+        
         // Show/hide appropriate links
-        document.getElementById('customerLinks').style.display = 
-            currentLoginType === 'customer' ? 'block' : 'none';
-        document.getElementById('adminLinks').style.display = 
-            currentLoginType === 'admin' ? 'block' : 'none';
+        document.getElementById('customerLinks').style.display = selectedType === 'customer' ? 'block' : 'none';
+        document.getElementById('adminLinks').style.display = selectedType === 'admin' ? 'block' : 'none';
     });
 });
 
@@ -32,11 +27,11 @@ if (loginForm) {
         e.preventDefault();
         
         const form = e.target;
-        const submitButton = form.querySelector('button');
+        const submitButton = form.querySelector('button[type="submit"]');
         const username = form.username.value;
         const password = form.password.value;
         
-        console.log('Form data:', { username, type: currentLoginType });
+        console.log('Form data:', { username, type: selectedType });
         
         // Disable submit button and show loading state
         submitButton.disabled = true;
@@ -51,22 +46,16 @@ if (loginForm) {
             const response = await fetch('/api/auth/login', {
                 method: 'POST',
                 headers: { 
-                    'Content-Type': 'application/json',
-                    'Accept': 'application/json'
+                    'Content-Type': 'application/json'
                 },
-                credentials: 'same-origin',
                 body: JSON.stringify({
                     username,
                     password,
-                    type: currentLoginType
+                    type: selectedType
                 })
             });
             
             console.log('Response received:', response.status);
-            
-            if (!response.ok) {
-                throw new Error(`HTTP error! status: ${response.status}`);
-            }
             
             const result = await response.json();
             console.log('Login result:', result);
@@ -74,17 +63,17 @@ if (loginForm) {
             if (result.success) {
                 showMessage('Login successful, redirecting...', 'success');
                 // Redirect based on role
-                window.location.href = result.user.role === 'admin' ? '/dashboard' : '/';
+                window.location.href = result.user?.role === 'admin' ? '/dashboard' : '/';
             } else {
                 showMessage(result.message || 'Login failed', 'danger');
                 submitButton.disabled = false;
-                submitButton.textContent = 'Login';
+                submitButton.innerHTML = 'Login';
             }
         } catch (error) {
             console.error('Login error:', error);
-            showMessage('Login failed. Please try again.', 'danger');
+            showMessage('Login failed. Please check your connection and try again.', 'danger');
             submitButton.disabled = false;
-            submitButton.textContent = 'Login';
+            submitButton.innerHTML = 'Login';
         }
     });
 } else {
