@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Restaurant Settings Dashboard</title>
+    <title>Restaurant Admin Dashboard</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.8.1/font/bootstrap-icons.css" rel="stylesheet">
     <style>
@@ -202,196 +202,234 @@
                 margin-bottom: 1rem;
             }
         }
+
+        .user-info-card {
+            background: white;
+            border-radius: 10px;
+            box-shadow: 0 2px 15px rgba(0,0,0,0.1);
+            padding: 1rem 2rem;
+            margin-bottom: 2rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .user-info {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+        }
+
+        .user-avatar {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            background: #4CAF50;
+            color: white;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+        }
+
+        .nav-tabs {
+            margin-bottom: 2rem;
+            border-bottom: 2px solid #dee2e6;
+        }
+
+        .nav-tabs .nav-link {
+            border: none;
+            color: #6c757d;
+            padding: 1rem 2rem;
+            font-weight: 500;
+            position: relative;
+        }
+
+        .nav-tabs .nav-link.active {
+            color: #4CAF50;
+            background: none;
+            border: none;
+        }
+
+        .nav-tabs .nav-link.active::after {
+            content: '';
+            position: absolute;
+            bottom: -2px;
+            left: 0;
+            width: 100%;
+            height: 2px;
+            background: #4CAF50;
+        }
+
+        .tab-content {
+            background: white;
+            border-radius: 10px;
+            box-shadow: 0 2px 15px rgba(0,0,0,0.1);
+            padding: 2rem;
+        }
+
+        .action-buttons .btn {
+            margin-left: 0.5rem;
+        }
     </style>
 </head>
 <body>
     <div class="dashboard-container">
-        <div class="nav-container">
-            <h1>Restaurant Dashboard</h1>
-            <div>
-                <a href="/" class="btn btn-outline-secondary me-2">Make Reservation</a>
+        <!-- User Info Section -->
+        <div class="user-info-card">
+            <div class="user-info">
+                <div class="user-avatar">
+                    <span id="userInitials">A</span>
+                </div>
+                <div>
+                    <h5 class="mb-0" id="userName">Admin Name</h5>
+                    <small class="text-muted" id="userRole">Restaurant Owner</small>
+                </div>
+            </div>
+            <div class="action-buttons">
+                <a href="/" class="btn btn-outline-secondary">View Site</a>
                 <button id="logoutBtn" class="btn btn-outline-danger">Logout</button>
             </div>
         </div>
 
-        <div class="settings-card">
-            <div class="settings-header">
-                <h2>Restaurant Settings</h2>
-                <p class="text-muted">Configure your restaurant's operational parameters</p>
+        <!-- Navigation Tabs -->
+        <ul class="nav nav-tabs" id="dashboardTabs" role="tablist">
+            <li class="nav-item" role="presentation">
+                <button class="nav-link active" id="reservations-tab" data-bs-toggle="tab" data-bs-target="#reservations" type="button" role="tab">
+                    Reservations Overview
+                </button>
+            </li>
+            <li class="nav-item" role="presentation">
+                <button class="nav-link" id="restaurant-tab" data-bs-toggle="tab" data-bs-target="#restaurant" type="button" role="tab">
+                    Restaurant Settings
+                </button>
+            </li>
+            <li class="nav-item" role="presentation">
+                <button class="nav-link" id="admin-tab" data-bs-toggle="tab" data-bs-target="#admin" type="button" role="tab">
+                    Admin Settings
+                </button>
+            </li>
+        </ul>
+
+        <!-- Tab Content -->
+        <div class="tab-content" id="dashboardTabContent">
+            <!-- Reservations Overview Tab -->
+            <div class="tab-pane fade show active" id="reservations" role="tabpanel">
+                <h3>Reservations Overview</h3>
+                <div class="row mb-4">
+                    <div class="col-md-3">
+                        <div class="card bg-light">
+                            <div class="card-body">
+                                <h6 class="card-title">Today's Reservations</h6>
+                                <h3 id="todayCount">0</h3>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="card bg-light">
+                            <div class="card-body">
+                                <h6 class="card-title">Today's Guests</h6>
+                                <h3 id="todayGuests">0</h3>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="card bg-light">
+                            <div class="card-body">
+                                <h6 class="card-title">Weekly Total</h6>
+                                <h3 id="weeklyTotal">0</h3>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="card bg-light">
+                            <div class="card-body">
+                                <h6 class="card-title">Pending Emails</h6>
+                                <h3 id="pendingEmails">0</h3>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="table-responsive">
+                    <table class="table" id="reservationsTable">
+                        <thead>
+                            <tr>
+                                <th>Date</th>
+                                <th>Time</th>
+                                <th>Name</th>
+                                <th>Email</th>
+                                <th>Guests</th>
+                                <th>Status</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="reservationsTableBody">
+                        </tbody>
+                    </table>
+                </div>
             </div>
 
-            <form id="settingsForm">
-                <div class="row">
-                    <div class="col-md-6">
-                        <div class="settings-section">
-                            <h3>Capacity Settings</h3>
-                            <div class="form-group">
+            <!-- Restaurant Settings Tab -->
+            <div class="tab-pane fade" id="restaurant" role="tabpanel">
+                <h3>Restaurant Settings</h3>
+                <form id="settingsForm">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="form-group mb-3">
                                 <label for="daily_max_guests" class="form-label">Daily Maximum Guests</label>
                                 <input type="number" class="form-control" id="daily_max_guests" name="daily_max_guests" required>
-                                <div class="help-text">Maximum number of guests allowed per day</div>
                             </div>
-                            <div class="form-group">
+                            <div class="form-group mb-3">
                                 <label for="max_party_size" class="form-label">Maximum Party Size</label>
                                 <input type="number" class="form-control" id="max_party_size" name="max_party_size" required>
-                                <div class="help-text">Maximum number of guests per reservation</div>
                             </div>
                         </div>
-                    </div>
-
-                    <div class="col-md-6">
-                        <div class="settings-section">
-                            <h3>Time Settings</h3>
-                            <div class="form-group">
+                        <div class="col-md-6">
+                            <div class="form-group mb-3">
                                 <label for="opening_time" class="form-label">Opening Time</label>
                                 <input type="time" class="form-control" id="opening_time" name="opening_time" required>
-                                <div class="help-text">Restaurant opening time</div>
                             </div>
-                            <div class="form-group">
+                            <div class="form-group mb-3">
                                 <label for="closing_time" class="form-label">Closing Time</label>
                                 <input type="time" class="form-control" id="closing_time" name="closing_time" required>
-                                <div class="help-text">Restaurant closing time</div>
-                            </div>
-                            <div class="form-group">
-                                <label for="slot_duration" class="form-label">Time Slot Duration (minutes)</label>
-                                <input type="number" class="form-control" id="slot_duration" name="slot_duration" required>
-                                <div class="help-text">Duration of each reservation slot</div>
                             </div>
                         </div>
                     </div>
-                </div>
-
-                <div class="form-group">
-                    <label for="reservation_window">Reservation Window (days)</label>
-                    <input type="number" 
-                           class="form-control" 
-                           id="reservation_window" 
-                           name="reservation_window" 
-                           min="1" 
-                           max="365" 
-                           required>
-                    <small class="form-text text-muted">How many days in advance can customers make reservations?</small>
-                </div>
-
-                <div class="form-group">
-                    <label for="window_update_time">Window Update Time</label>
-                    <input type="time" 
-                           class="form-control" 
-                           id="window_update_time" 
-                           name="window_update_time" 
-                           required>
-                    <small class="form-text text-muted">What time should the reservation window roll forward each day?</small>
-                </div>
-
-                <div class="text-end mt-4">
-                    <button type="submit" class="btn btn-save btn-lg">Save Settings</button>
-                </div>
-            </form>
-        </div>
-
-        <div class="reservations-section">
-            <h2>Reservations Overview</h2>
-            
-            <!-- Statistics Summary -->
-            <div class="row mb-4">
-                <div class="col-md-3">
-                    <div class="card bg-primary text-white">
-                        <div class="card-body">
-                            <h5 class="card-title">Today's Reservations</h5>
-                            <h3 id="todayCount">-</h3>
-                        </div>
-                    </div>
-                </div>
-                <div class="col-md-3">
-                    <div class="card bg-success text-white">
-                        <div class="card-body">
-                            <h5 class="card-title">Today's Guests</h5>
-                            <h3 id="todayGuests">-</h3>
-                        </div>
-                    </div>
-                </div>
-                <div class="col-md-3">
-                    <div class="card bg-info text-white">
-                        <div class="card-body">
-                            <h5 class="card-title">Weekly Total</h5>
-                            <h3 id="weeklyTotal">-</h3>
-                        </div>
-                    </div>
-                </div>
-                <div class="col-md-3">
-                    <div class="card bg-warning text-white">
-                        <div class="card-body">
-                            <h5 class="card-title">Pending Emails</h5>
-                            <h3 id="pendingEmails">-</h3>
-                        </div>
-                    </div>
-                </div>
+                    <button type="submit" class="btn btn-primary">Save Settings</button>
+                </form>
             </div>
 
-            <!-- Filters and Search -->
-            <div class="row mb-3">
-                <div class="col-md-4">
-                    <div class="input-group">
-                        <span class="input-group-text">Date Range</span>
-                        <input type="date" class="form-control" id="startDate">
-                        <input type="date" class="form-control" id="endDate">
+            <!-- Admin Settings Tab -->
+            <div class="tab-pane fade" id="admin" role="tabpanel">
+                <h3>Admin Settings</h3>
+                <div class="row">
+                    <div class="col-md-6">
+                        <div class="card mb-4">
+                            <div class="card-body">
+                                <h5 class="card-title">User Management</h5>
+                                <div class="list-group" id="userList">
+                                    <!-- User list will be populated here -->
+                                </div>
+                                <button class="btn btn-primary mt-3" id="addUserBtn">Add New User</button>
+                            </div>
+                        </div>
                     </div>
-                </div>
-                <div class="col-md-4">
-                    <div class="input-group">
-                        <span class="input-group-text">Search</span>
-                        <input type="text" class="form-control" id="searchInput" placeholder="Search name or email...">
-                    </div>
-                </div>
-                <div class="col-md-4">
-                    <button class="btn btn-primary" id="applyFilters">Apply Filters</button>
-                    <button class="btn btn-outline-secondary" id="resetFilters">Reset</button>
-                </div>
-            </div>
-
-            <div class="table-responsive">
-                <table class="table table-hover">
-                    <thead>
-                        <tr>
-                            <th class="sortable" data-sort="date">Date <i class="bi bi-arrow-down-up"></i></th>
-                            <th class="sortable" data-sort="time">Time <i class="bi bi-arrow-down-up"></i></th>
-                            <th class="sortable" data-sort="name">Name <i class="bi bi-arrow-down-up"></i></th>
-                            <th class="sortable" data-sort="email">Email <i class="bi bi-arrow-down-up"></i></th>
-                            <th class="sortable" data-sort="guests">Guests <i class="bi bi-arrow-down-up"></i></th>
-                            <th class="sortable" data-sort="email_status">Email Status <i class="bi bi-arrow-down-up"></i></th>
-                            <th>Actions</th>
-                        </tr>
-                    </thead>
-                    <tbody id="reservationsTable">
-                        <!-- Reservations will be populated here -->
-                    </tbody>
-                </table>
-            </div>
-
-            <!-- Loading Spinner -->
-            <div id="loadingSpinner" class="text-center d-none">
-                <div class="spinner-border text-primary" role="status">
-                    <span class="visually-hidden">Loading...</span>
-                </div>
-            </div>
-        </div>
-
-        <button id="viewDbBtn" class="btn btn-secondary">View Database</button>
-
-        <div id="dbViewer" class="modal fade" tabindex="-1">
-            <div class="modal-dialog modal-lg">
-                <div class="modal-content">
-                    <div class="modal-header">
-                        <h5 class="modal-title">Database Contents</h5>
-                        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-                    </div>
-                    <div class="modal-body">
-                        <pre id="dbContent"></pre>
+                    <div class="col-md-6">
+                        <div class="card mb-4">
+                            <div class="card-body">
+                                <h5 class="card-title">Role Management</h5>
+                                <div class="list-group" id="roleList">
+                                    <!-- Role list will be populated here -->
+                                </div>
+                            </div>
+                        </div>
                     </div>
                 </div>
             </div>
         </div>
     </div>
 
+    <!-- Bootstrap Bundle with Popper -->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
     <script src="js/dashboard.js"></script>
 </body>
