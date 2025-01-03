@@ -63,17 +63,18 @@ if (loginForm) {
             });
             
             console.log('Response received:', response.status);
-            console.log('Response headers:', Object.fromEntries([...response.headers]));
+            
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
             
             const result = await response.json();
             console.log('Login result:', result);
             
             if (result.success) {
                 showMessage('Login successful, redirecting...', 'success');
-                // Force redirect immediately
-                const redirectUrl = result.role === 'admin' ? '/dashboard' : '/customer-dashboard';
-                console.log('Redirecting to:', redirectUrl);
-                window.location.replace(redirectUrl);
+                // Redirect based on role
+                window.location.href = result.user.role === 'admin' ? '/dashboard' : '/';
             } else {
                 showMessage(result.message || 'Login failed', 'danger');
                 submitButton.disabled = false;
@@ -92,6 +93,10 @@ if (loginForm) {
 
 function showMessage(message, type) {
     const messageDiv = document.getElementById('loginMessage');
+    if (!messageDiv) {
+        console.error('Message div not found');
+        return;
+    }
     if (!message) {
         messageDiv.style.display = 'none';
         return;
