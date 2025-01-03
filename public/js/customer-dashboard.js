@@ -51,15 +51,15 @@ async function loadUserInfo() {
 // Load reservations
 async function loadReservations() {
     try {
-        const response = await fetch('/api/reservations/user');
+        const response = await fetch('/api/reservations/my-reservations');
         const data = await response.json();
         
-        if (data.success) {
-            userReservations = data.reservations;
+        if (Array.isArray(data)) {
+            userReservations = data;
             updateReservationsDisplay();
             updateUpcomingCount();
         } else {
-            showToast(data.message, 'error');
+            showToast(data.message || 'Failed to load reservations', 'error');
         }
     } catch (error) {
         console.error('Error loading reservations:', error);

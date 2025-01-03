@@ -51,8 +51,18 @@ const reservationRoutes = () => {
             }
             
             const userEmail = req.session.user.email;
-            const reservations = await getReservations(userEmail);
-            res.json(reservations || []);
+            console.log('Fetching reservations for user:', userEmail);
+            
+            const result = await pool.query(
+                `SELECT * FROM reservations 
+                 WHERE email = $1 
+                 ORDER BY date DESC, time DESC`,
+                [userEmail]
+            );
+            
+            console.log('Found reservations:', result.rows.length);
+            res.json(result.rows);
+            
         } catch (error) {
             console.error('Error fetching user reservations:', error);
             res.status(500).json({ 
