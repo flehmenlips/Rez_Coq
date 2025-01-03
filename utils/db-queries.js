@@ -152,6 +152,7 @@ async function updateSettings(settings) {
 
 // Initialize settings if they don't exist
 async function initializeSettings() {
+    const client = await pool.connect();
     try {
         const defaultSettings = {
             opening_time: '11:00',
@@ -164,7 +165,7 @@ async function initializeSettings() {
         };
 
         // Get existing settings
-        const result = await pool.query('SELECT * FROM settings');
+        const result = await client.query('SELECT * FROM settings');
         const existingSettings = {};
         result.rows.forEach(row => {
             existingSettings[row.key] = row.value;
@@ -173,7 +174,7 @@ async function initializeSettings() {
         // Update or insert settings
         for (const [key, value] of Object.entries(defaultSettings)) {
             if (!existingSettings[key]) {
-                await pool.query(
+                await client.query(
                     'INSERT INTO settings (key, value) VALUES ($1, $2)',
                     [key, value]
                 );
@@ -184,6 +185,8 @@ async function initializeSettings() {
     } catch (error) {
         console.error('Error initializing settings:', error);
         throw error;
+    } finally {
+        client.release();
     }
 }
 
@@ -235,20 +238,6 @@ async function initializeTables() {
             )
         `);
 
-        // Initialize default settings if needed
-        await client.query(`
-            INSERT INTO settings (key, value)
-            VALUES 
-                ('daily_max_guests', '100'),
-                ('opening_time', '11:00'),
-                ('closing_time', '22:00'),
-                ('slot_duration', '30'),
-                ('max_party_size', '12'),
-                ('availability_window', '60'),
-                ('window_update_time', '00:00')
-            ON CONFLICT (key) DO NOTHING
-        `);
-
         await client.query('COMMIT');
         console.log('Database tables initialized successfully');
     } catch (error) {
@@ -298,6 +287,7 @@ async function initializeDatabase() {
     try {
         await initializeTables();
         await addStatusField();
+        await initializeSettings();
         console.log('Database initialization complete');
     } catch (error) {
         console.error('Database initialization failed:', error);
