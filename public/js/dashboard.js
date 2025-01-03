@@ -396,22 +396,23 @@ async function loadUsers() {
     if (!userList) return;
     
     try {
-        const response = await fetch('/api/users');
+        const response = await fetch('/api/admin/users');
         if (!response.ok) {
-            throw new Error(`HTTP error! status: ${response.status}`);
+            const errorData = await response.json();
+            throw new Error(errorData.message || `HTTP error! status: ${response.status}`);
         }
         
-        const users = await response.json();
-        if (!Array.isArray(users)) {
+        const result = await response.json();
+        if (!result.success || !Array.isArray(result.users)) {
             throw new Error('Invalid users data received');
         }
         
-        populateUserList(users);
+        populateUserList(result.users);
     } catch (error) {
         console.error('Error loading users:', error);
         userList.innerHTML = `
             <div class="alert alert-warning">
-                Error loading users. Please try again later.
+                ${error.message || 'Error loading users. Please try again later.'}
             </div>
         `;
     }

@@ -3,6 +3,38 @@ const router = express.Router();
 const pool = require('../utils/db');
 
 const adminRoutes = () => {
+    // Get users (admin only)
+    router.get('/users', async (req, res) => {
+        const client = await pool.connect();
+        try {
+            // Check if user is admin
+            if (req.session?.user?.role !== 'admin') {
+                return res.status(403).json({
+                    success: false,
+                    message: 'Admin access required'
+                });
+            }
+
+            const result = await client.query(
+                'SELECT id, username, email, role, created_at FROM users ORDER BY created_at DESC'
+            );
+
+            res.json({
+                success: true,
+                users: result.rows
+            });
+        } catch (error) {
+            console.error('Error fetching users:', error);
+            res.status(500).json({
+                success: false,
+                message: 'Failed to fetch users',
+                error: error.message
+            });
+        } finally {
+            client.release();
+        }
+    });
+
     // Get single reservation
     router.get('/reservations/:id', async (req, res) => {
         const client = await pool.connect();
