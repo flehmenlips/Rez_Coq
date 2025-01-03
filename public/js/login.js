@@ -62,8 +62,13 @@ if (loginForm) {
             
             if (result.success) {
                 showMessage('Login successful, redirecting...', 'success');
-                // Redirect based on role
-                window.location.href = result.user?.role === 'admin' ? '/dashboard' : '/';
+                // Add delay to ensure session is set before redirect
+                setTimeout(() => {
+                    // Redirect based on role
+                    const redirectUrl = result.user?.role === 'admin' ? '/dashboard' : '/';
+                    console.log('Redirecting to:', redirectUrl);
+                    window.location.href = redirectUrl;
+                }, 1000);
             } else {
                 showMessage(result.message || 'Login failed', 'danger');
                 submitButton.disabled = false;

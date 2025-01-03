@@ -41,9 +41,16 @@ app.use(session({
     cookie: {
         secure: process.env.NODE_ENV === 'production',
         httpOnly: true,
+        sameSite: 'lax',
         maxAge: 24 * 60 * 60 * 1000 // 24 hours
     }
 }));
+
+// Add session debug middleware
+app.use((req, res, next) => {
+    console.log('Session data:', req.session);
+    next();
+});
 
 // Serve static files that don't require auth
 app.use(express.static(path.join(__dirname, 'public'), {
