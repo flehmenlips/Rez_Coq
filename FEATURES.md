@@ -22,6 +22,12 @@
 - [ ] Mobile-responsive design improvements
 - [ ] Quick re-book from past reservations
 - [ ] Social sharing for reservations
+- 🟨 Service-Optimized Dark Mode
+  - Automatic dimming during dinner service hours
+  - Quick toggle for different lighting conditions
+  - Reduced eye strain for staff
+  - Ambient light sensor integration (future)
+  - Separate themes for front-of-house and back-of-house
 
 ### Admin Features
 - [ ] Advanced analytics dashboard
@@ -89,7 +95,18 @@
 - [ ] Better loading states
 - [ ] Error message improvements
 - [ ] Accessibility enhancements
-- [ ] Dark mode support
+- 🟨 Dark mode support
+  - Priority: 🟡 High (Staff Usability)
+  - Status: In Progress
+  - Dependencies:
+    - CSS variable system
+    - Theme switching mechanism
+    - Local storage for preference
+  - Implementation:
+    - System-based auto-switching
+    - Manual toggle in navigation
+    - Scheduled switching for service hours
+    - Brightness controls
 
 ## Documentation
 - [ ] API documentation
