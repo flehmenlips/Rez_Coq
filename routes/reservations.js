@@ -2,6 +2,7 @@ const express = require('express');
 const router = express.Router();
 const pool = require('../utils/db');
 const { getReservations, createReservation, getSettings } = require('../utils/db-queries');
+const { sendEmail } = require('../utils/email');
 
 const reservationRoutes = () => {
     // Get available time slots
@@ -98,6 +99,30 @@ const reservationRoutes = () => {
             
             // Create the reservation
             const reservation = await createReservation(req.body);
+
+            // Format date for email
+            const formattedDate = new Date(date).toLocaleDateString('en-US', {
+                weekday: 'long',
+                year: 'numeric',
+                month: 'long',
+                day: 'numeric'
+            });
+
+            // Send confirmation email
+            try {
+                await sendEmail(req.body.email, 'confirmation', {
+                    id: reservation.id,
+                    name: req.body.name,
+                    date: formattedDate,
+                    time: time,
+                    guests: guests
+                });
+                console.log('Confirmation email sent successfully');
+            } catch (emailError) {
+                console.error('Failed to send confirmation email:', emailError);
+                // Don't fail the request if email fails
+            }
+
             res.json({ success: true, reservation });
         } catch (error) {
             console.error('Error creating reservation:', error);

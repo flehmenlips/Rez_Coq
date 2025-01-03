@@ -295,6 +295,11 @@
                 const modal = new bootstrap.Modal(document.getElementById('confirmationModal'));
                 modal.show();
                 
+                // Add event handler for when modal is hidden
+                document.getElementById('confirmationModal').addEventListener('hidden.bs.modal', function () {
+                    window.location.href = '/customer-dashboard';
+                });
+                
                 // Reset form
                 form.reset();
             } else {
