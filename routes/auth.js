@@ -8,7 +8,7 @@ const authRoutes = (pool) => {
         const { username, password, type } = req.body;
         
         try {
-            console.log('Login attempt for:', username, 'type:', type);
+            console.log('Login attempt for:', username);
             
             const result = await pool.query(
                 'SELECT * FROM users WHERE username = $1',
@@ -19,14 +19,14 @@ const authRoutes = (pool) => {
             
             if (!user) {
                 console.log('User not found:', username);
-                return res.json({ success: false, message: 'User not found' });
+                return res.json({ success: false, message: 'Invalid username or password' });
             }
             
             // Verify password
             const validPassword = await bcrypt.compare(password, user.password_hash);
             if (!validPassword) {
                 console.log('Invalid password for user:', username);
-                return res.json({ success: false, message: 'Invalid password' });
+                return res.json({ success: false, message: 'Invalid username or password' });
             }
             
             // Check role matches type
@@ -35,47 +35,32 @@ const authRoutes = (pool) => {
                 return res.json({ success: false, message: 'Not authorized as admin' });
             }
 
-            // Set session data directly
+            // Update last login time
+            await pool.query(
+                'UPDATE users SET last_login = CURRENT_TIMESTAMP WHERE id = $1',
+                [user.id]
+            );
+            
+            // Set session data
             req.session.user = {
                 id: user.id,
                 username: user.username,
                 role: user.role,
                 email: user.email
             };
-            req.session.created = new Date().getTime();
-
-            // Save session
-            try {
-                await new Promise((resolve, reject) => {
-                    req.session.save((err) => {
-                        if (err) {
-                            console.error('Session save error:', err);
-                            reject(err);
-                        } else {
-                            resolve();
-                        }
-                    });
-                });
-
-                console.log('Login successful for:', username);
-                console.log('Session data:', {
-                    id: req.session.id,
-                    user: req.session.user,
-                    created: req.session.created
-                });
-
-                return res.json({ 
-                    success: true, 
-                    role: user.role,
-                    message: 'Login successful' 
-                });
-            } catch (saveError) {
-                console.error('Failed to save session:', saveError);
-                return res.json({ success: false, message: 'Login failed - session error' });
-            }
+            
+            console.log('Login successful for:', username);
+            console.log('Session data:', req.session);
+            
+            res.json({ 
+                success: true, 
+                role: user.role,
+                message: 'Login successful' 
+            });
+            
         } catch (error) {
             console.error('Login error:', error);
-            return res.json({ success: false, message: 'Login failed - server error' });
+            res.json({ success: false, message: 'Login failed' });
         }
     });
     

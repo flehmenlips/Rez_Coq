@@ -134,18 +134,15 @@ app.use(cookieParser());
 app.use(session({
     store: new ConnectPgSimple({
         pool: pool,
-        tableName: 'session',
-        pruneSessionInterval: 60 // Cleanup every minute
+        tableName: 'session'
     }),
     secret: process.env.SESSION_SECRET || 'your-secret-key',
-    resave: true,
+    resave: false,
     saveUninitialized: false,
-    name: 'rez_coq_sid',
     cookie: {
         secure: process.env.NODE_ENV === 'production',
         httpOnly: true,
-        sameSite: 'lax',
-        maxAge: 8 * 60 * 60 * 1000 // 8 hours
+        maxAge: 24 * 60 * 60 * 1000 // 24 hours
     }
 }));
 
@@ -154,29 +151,8 @@ app.use((req, res, next) => {
     res.set({
         'Cache-Control': 'no-store, no-cache, must-revalidate, proxy-revalidate',
         'Pragma': 'no-cache',
-        'Expires': '0',
-        'Surrogate-Control': 'no-store'
+        'Expires': '0'
     });
-    next();
-});
-
-// Session check middleware
-app.use((req, res, next) => {
-    if (req.session) {
-        // Ensure session has created timestamp
-        if (req.session.user && !req.session.created) {
-            req.session.created = new Date().getTime();
-        }
-        
-        // Log session data for debugging
-        if (req.session.user) {
-            console.log('Active session:', {
-                id: req.session.id,
-                user: req.session.user,
-                created: req.session.created
-            });
-        }
-    }
     next();
 });
 
