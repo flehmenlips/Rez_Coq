@@ -395,6 +395,32 @@
                             </div>
                         </div>
                     </div>
+                    <div class="row mb-4">
+                        <div class="col-md-6">
+                            <div class="form-group">
+                                <label for="availabilityWindow" class="form-label">Availability Window (days)</label>
+                                <input type="number" 
+                                       class="form-control" 
+                                       id="availabilityWindow" 
+                                       name="availability_window" 
+                                       min="1" 
+                                       max="365" 
+                                       required>
+                                <small class="help-text">How far in advance customers can make reservations</small>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="form-group">
+                                <label for="windowUpdateTime" class="form-label">Window Update Time</label>
+                                <input type="time" 
+                                       class="form-control" 
+                                       id="windowUpdateTime" 
+                                       name="window_update_time" 
+                                       required>
+                                <small class="help-text">Time when new slots become available each day</small>
+                            </div>
+                        </div>
+                    </div>
                     <button type="submit" class="btn btn-primary">Save Settings</button>
                 </form>
             </div>

@@ -184,15 +184,23 @@ async function deleteReservation(id) {
 async function loadSettings() {
     try {
         const response = await fetch('/api/settings');
-        if (!response.ok) {
-            throw new Error(`HTTP error! status: ${response.status}`);
-        }
-        
         const settings = await response.json();
-        populateSettingsForm(settings);
+        
+        // Populate existing fields
+        document.getElementById('openTime').value = settings.open_time || '';
+        document.getElementById('closeTime').value = settings.close_time || '';
+        document.getElementById('maxPartySize').value = settings.max_party_size || '';
+        document.getElementById('dailyMaxGuests').value = settings.daily_max_guests || '';
+        document.getElementById('slotDuration').value = settings.slot_duration || '';
+        
+        // Populate new fields
+        document.getElementById('availabilityWindow').value = settings.availability_window || '60';
+        document.getElementById('windowUpdateTime').value = settings.window_update_time || '00:00';
+        
+        console.log('Settings loaded successfully');
     } catch (error) {
         console.error('Error loading settings:', error);
-        showAlert('Error loading settings. Please try again.', 'danger');
+        showError('Failed to load settings. Please try again.');
     }
 }
 
@@ -208,11 +216,23 @@ function populateSettingsForm(settings) {
 
 async function saveSettings(event) {
     event.preventDefault();
+    const form = event.target;
+    const submitButton = form.querySelector('button[type="submit"]');
+    const originalText = submitButton.textContent;
     
-    const formData = new FormData(event.target);
-    const settings = Object.fromEntries(formData.entries());
-
     try {
+        submitButton.disabled = true;
+        submitButton.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Saving...';
+        
+        const formData = new FormData(form);
+        const settings = Object.fromEntries(formData.entries());
+        
+        // Validate availability window
+        const availabilityWindow = parseInt(settings.availability_window);
+        if (isNaN(availabilityWindow) || availabilityWindow < 1 || availabilityWindow > 365) {
+            throw new Error('Availability window must be between 1 and 365 days');
+        }
+        
         const response = await fetch('/api/settings', {
             method: 'POST',
             headers: {
@@ -220,15 +240,18 @@ async function saveSettings(event) {
             },
             body: JSON.stringify(settings)
         });
-
+        
         if (!response.ok) {
-            throw new Error(`HTTP error! status: ${response.status}`);
+            throw new Error('Failed to save settings');
         }
         
-        showAlert('Settings saved successfully', 'success');
+        showSuccess('Settings saved successfully');
     } catch (error) {
         console.error('Error saving settings:', error);
-        showAlert('Error saving settings. Please try again.', 'danger');
+        showError(error.message || 'Failed to save settings. Please try again.');
+    } finally {
+        submitButton.disabled = false;
+        submitButton.textContent = originalText;
     }
 }
 
