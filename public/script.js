@@ -41,5 +41,110 @@ async function checkAdminAccess() {
     }
 }
 
-// Call on page load
-document.addEventListener('DOMContentLoaded', checkAdminAccess);
+// Date handling functions
+function getMinDate() {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    return today;
+}
+
+function getMaxDate() {
+    const maxDate = new Date();
+    maxDate.setDate(maxDate.getDate() + 60); // 60 days from today
+    return maxDate;
+}
+
+function formatDateForInput(date) {
+    return date.toISOString().split('T')[0];
+}
+
+// Initialize date picker with restrictions
+function initializeDatePicker() {
+    const dateInput = document.getElementById('date');
+    const minDate = getMinDate();
+    const maxDate = getMaxDate();
+
+    dateInput.min = formatDateForInput(minDate);
+    dateInput.max = formatDateForInput(maxDate);
+    
+    // Set default value to today if within business hours, otherwise tomorrow
+    const now = new Date();
+    const defaultDate = now.getHours() < 20 ? now : new Date(now.setDate(now.getDate() + 1));
+    dateInput.value = formatDateForInput(defaultDate);
+
+    // Add change event listener
+    dateInput.addEventListener('change', function(e) {
+        const selectedDate = new Date(e.target.value);
+        const dateFeedback = document.getElementById('dateFeedback');
+        
+        if (selectedDate < minDate) {
+            dateFeedback.textContent = "Please select a future date";
+            dateFeedback.style.display = "block";
+            e.target.value = formatDateForInput(minDate);
+        } else if (selectedDate > maxDate) {
+            dateFeedback.textContent = "Please select a date within 60 days";
+            dateFeedback.style.display = "block";
+            e.target.value = formatDateForInput(maxDate);
+        } else {
+            dateFeedback.style.display = "none";
+            loadAvailableTimeSlots(e.target.value);
+        }
+    });
+
+    // Initial load of time slots
+    loadAvailableTimeSlots(dateInput.value);
+}
+
+// Enhanced time slot loading
+async function loadAvailableTimeSlots(selectedDate) {
+    const timeSelect = document.getElementById('time');
+    const loadingIndicator = document.getElementById('timeSlotLoading');
+    
+    try {
+        timeSelect.disabled = true;
+        loadingIndicator.style.display = 'block';
+        
+        const response = await fetch(`/api/reservations/available-times?date=${selectedDate}`);
+        const availableTimes = await response.json();
+        
+        // Clear existing options
+        timeSelect.innerHTML = '';
+        
+        if (availableTimes.length === 0) {
+            const option = document.createElement('option');
+            option.value = '';
+            option.textContent = 'No available times for this date';
+            timeSelect.appendChild(option);
+        } else {
+            const defaultOption = document.createElement('option');
+            defaultOption.value = '';
+            defaultOption.textContent = 'Select a time';
+            timeSelect.appendChild(defaultOption);
+            
+            availableTimes.forEach(time => {
+                const option = document.createElement('option');
+                option.value = time;
+                option.textContent = time;
+                timeSelect.appendChild(option);
+            });
+        }
+    } catch (error) {
+        console.error('Error loading time slots:', error);
+        timeSelect.innerHTML = '<option value="">Error loading available times</option>';
+    } finally {
+        timeSelect.disabled = false;
+        loadingIndicator.style.display = 'none';
+    }
+}
+
+// Initialize on page load
+document.addEventListener('DOMContentLoaded', function() {
+    initializeDatePicker();
+    checkAdminAccess();
+    
+    // Initialize all tooltips
+    const tooltips = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
+    tooltips.map(function (tooltipTriggerEl) {
+        return new bootstrap.Tooltip(tooltipTriggerEl);
+    });
+});

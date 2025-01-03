@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net; style-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net; font-src 'self' data: https://cdn.jsdelivr.net; img-src 'self' data: https://cdn.jsdelivr.net">
     <title>Restaurant Reservation</title>
     <link rel="stylesheet" href="css/main.css">
@@ -88,10 +88,65 @@
         @media (max-width: 768px) {
             .reservation-form {
                 grid-template-columns: 1fr;
+                gap: 1rem;
             }
             .reservation-container {
-                padding: 1rem;
+                padding: 0.5rem;
             }
+            .reservation-card {
+                padding: 1rem;
+                margin-top: 1rem;
+            }
+            .page-title {
+                font-size: 2rem;
+                margin-bottom: 1rem;
+            }
+            .form-control {
+                font-size: 16px; /* Prevent iOS zoom on focus */
+                padding: 0.5rem;
+            }
+            .btn-primary {
+                width: 100%;
+                padding: 0.75rem 1rem;
+            }
+            .nav-container {
+                padding: 0.5rem;
+                flex-wrap: wrap;
+                gap: 0.5rem;
+            }
+            .modal-dialog {
+                margin: 0.5rem;
+            }
+        }
+
+        /* Date picker styles */
+        input[type="date"]::-webkit-calendar-picker-indicator {
+            background: transparent;
+            bottom: 0;
+            color: transparent;
+            cursor: pointer;
+            height: auto;
+            left: 0;
+            position: absolute;
+            right: 0;
+            top: 0;
+            width: auto;
+        }
+
+        input[type="date"]:disabled {
+            background-color: #e9ecef;
+            cursor: not-allowed;
+        }
+
+        .date-container {
+            position: relative;
+        }
+
+        .date-feedback {
+            display: none;
+            color: #dc3545;
+            font-size: 0.875rem;
+            margin-top: 0.25rem;
         }
     </style>
 </head>
@@ -115,7 +170,17 @@
                 <div class="reservation-form">
                     <div class="form-group">
                         <label for="date" class="form-label">Date</label>
-                        <input type="date" class="form-control" id="date" name="date" required>
+                        <div class="date-container">
+                            <input type="date" 
+                                   class="form-control" 
+                                   id="date" 
+                                   name="date" 
+                                   required
+                                   data-bs-toggle="tooltip" 
+                                   data-bs-placement="top" 
+                                   title="Select a date within our booking window">
+                            <div class="date-feedback" id="dateFeedback"></div>
+                        </div>
                     </div>
                     
                     <div class="form-group">
