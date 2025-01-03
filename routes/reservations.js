@@ -172,6 +172,162 @@ const reservationRoutes = () => {
         }
     });
 
+    // Cancel reservation
+    router.post('/:id/cancel', async (req, res) => {
+        try {
+            const { id } = req.params;
+            
+            // Verify the reservation exists and belongs to the user
+            const checkResult = await pool.query(
+                'SELECT * FROM reservations WHERE id = $1 AND email = $2',
+                [id, req.session.user.email]
+            );
+            
+            if (checkResult.rows.length === 0) {
+                return res.status(404).json({
+                    success: false,
+                    message: 'Reservation not found or not authorized'
+                });
+            }
+            
+            // Delete the reservation
+            await pool.query(
+                'DELETE FROM reservations WHERE id = $1',
+                [id]
+            );
+            
+            // Send cancellation email
+            try {
+                const reservation = checkResult.rows[0];
+                const formattedDate = new Date(reservation.date).toLocaleDateString('en-US', {
+                    weekday: 'long',
+                    year: 'numeric',
+                    month: 'long',
+                    day: 'numeric'
+                });
+                
+                await sendEmail(reservation.email, 'cancellation', {
+                    name: reservation.name,
+                    date: formattedDate,
+                    time: reservation.time,
+                    guests: reservation.guests
+                });
+                console.log('Cancellation email sent successfully');
+            } catch (emailError) {
+                console.error('Failed to send cancellation email:', emailError);
+                // Don't fail the request if email fails
+            }
+            
+            res.json({
+                success: true,
+                message: 'Reservation cancelled successfully'
+            });
+            
+        } catch (error) {
+            console.error('Error cancelling reservation:', error);
+            res.status(500).json({
+                success: false,
+                message: 'Failed to cancel reservation'
+            });
+        }
+    });
+
+    // Modify reservation
+    router.put('/:id', async (req, res) => {
+        try {
+            const { id } = req.params;
+            const { date, time, guests } = req.body;
+            
+            // Verify the reservation exists and belongs to the user
+            const checkResult = await pool.query(
+                'SELECT * FROM reservations WHERE id = $1 AND email = $2',
+                [id, req.session.user.email]
+            );
+            
+            if (checkResult.rows.length === 0) {
+                return res.status(404).json({
+                    success: false,
+                    message: 'Reservation not found or not authorized'
+                });
+            }
+            
+            // Get settings for validation
+            const settings = await getSettings();
+            const maxPartySize = parseInt(settings.max_party_size);
+            const dailyMaxGuests = parseInt(settings.daily_max_guests);
+            
+            // Validate party size
+            if (parseInt(guests) > maxPartySize) {
+                return res.status(400).json({
+                    success: false,
+                    message: `Party size cannot exceed ${maxPartySize} guests`
+                });
+            }
+            
+            // Get total guests for the day (excluding this reservation)
+            const existingReservations = await pool.query(
+                'SELECT COALESCE(SUM(guests), 0) as total_guests FROM reservations WHERE date = $1 AND id != $2',
+                [date, id]
+            );
+            
+            const currentTotal = parseInt(existingReservations.rows[0].total_guests);
+            const newTotal = currentTotal + parseInt(guests);
+            
+            // Validate against daily maximum
+            if (newTotal > dailyMaxGuests) {
+                return res.status(400).json({
+                    success: false,
+                    message: `Cannot exceed ${dailyMaxGuests} total guests per day. Currently ${currentTotal} guests reserved.`
+                });
+            }
+            
+            // Update the reservation
+            const result = await pool.query(
+                `UPDATE reservations 
+                 SET date = $1, time = $2, guests = $3, email_status = 'pending'
+                 WHERE id = $4
+                 RETURNING *`,
+                [date, time, guests, id]
+            );
+            
+            const updatedReservation = result.rows[0];
+            
+            // Send modification confirmation email
+            try {
+                const formattedDate = new Date(date).toLocaleDateString('en-US', {
+                    weekday: 'long',
+                    year: 'numeric',
+                    month: 'long',
+                    day: 'numeric'
+                });
+                
+                await sendEmail(updatedReservation.email, 'modification', {
+                    name: updatedReservation.name,
+                    date: formattedDate,
+                    time: time,
+                    guests: guests
+                });
+                console.log('Modification confirmation email sent successfully');
+            } catch (emailError) {
+                console.error('Failed to send modification email:', emailError);
+                // Don't fail the request if email fails
+            }
+            
+            res.json({
+                success: true,
+                message: 'Reservation modified successfully',
+                reservation: updatedReservation
+            });
+            
+        } catch (error) {
+            console.error('Error modifying reservation:', error);
+            res.status(500).json({
+                success: false,
+                message: 'Failed to modify reservation'
+            });
+        }
+    });
+
     return router;
 };
 
