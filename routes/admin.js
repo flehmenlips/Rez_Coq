@@ -5,6 +5,7 @@ const pool = require('../utils/db');
 const adminRoutes = () => {
     // Get single reservation
     router.get('/reservations/:id', async (req, res) => {
+        const client = await pool.connect();
         try {
             // Check if user is admin
             if (req.session?.user?.role !== 'admin') {
@@ -15,7 +16,7 @@ const adminRoutes = () => {
             }
 
             const { id } = req.params;
-            const result = await pool.query(
+            const result = await client.query(
                 'SELECT * FROM reservations WHERE id = $1',
                 [id]
             );
@@ -38,8 +39,11 @@ const adminRoutes = () => {
             console.error('Error fetching reservation:', error);
             res.status(500).json({
                 success: false,
-                message: 'Failed to fetch reservation'
+                message: 'Failed to fetch reservation',
+                error: error.message
             });
+        } finally {
+            client.release();
         }
     });
 
@@ -70,6 +74,20 @@ const adminRoutes = () => {
 
             await client.query('BEGIN');
 
+            // First check if reservation exists
+            const checkResult = await client.query(
+                'SELECT id FROM reservations WHERE id = $1',
+                [id]
+            );
+
+            if (checkResult.rows.length === 0) {
+                await client.query('ROLLBACK');
+                return res.status(404).json({
+                    success: false,
+                    message: 'Reservation not found'
+                });
+            }
+
             // Get settings for validation
             const settingsResult = await client.query('SELECT * FROM settings');
             const settings = {};
@@ -82,6 +100,7 @@ const adminRoutes = () => {
 
             // Validate party size
             if (parseInt(guests) > maxPartySize) {
+                await client.query('ROLLBACK');
                 return res.status(400).json({
                     success: false,
                     message: `Party size cannot exceed ${maxPartySize} guests`
@@ -99,6 +118,7 @@ const adminRoutes = () => {
 
             // Validate against daily maximum
             if (newTotal > dailyMaxGuests) {
+                await client.query('ROLLBACK');
                 return res.status(400).json({
                     success: false,
                     message: `Cannot exceed ${dailyMaxGuests} total guests per day. Currently ${currentTotal} guests reserved.`
@@ -117,14 +137,6 @@ const adminRoutes = () => {
                  RETURNING *`,
                 [date, formattedTime, name, email, parseInt(guests), status, id]
             );
-
-            if (result.rows.length === 0) {
-                await client.query('ROLLBACK');
-                return res.status(404).json({
-                    success: false,
-                    message: 'Reservation not found'
-                });
-            }
 
             await client.query('COMMIT');
 
@@ -154,6 +166,7 @@ const adminRoutes = () => {
 
     // Delete reservation
     router.delete('/reservations/:id', async (req, res) => {
+        const client = await pool.connect();
         try {
             // Check if user is admin
             if (req.session?.user?.role !== 'admin') {
@@ -165,29 +178,44 @@ const adminRoutes = () => {
 
             const { id } = req.params;
 
-            // Delete the reservation
-            const result = await pool.query(
-                'DELETE FROM reservations WHERE id = $1 RETURNING *',
+            await client.query('BEGIN');
+
+            // First check if reservation exists
+            const checkResult = await client.query(
+                'SELECT id FROM reservations WHERE id = $1',
                 [id]
             );
 
-            if (result.rows.length === 0) {
+            if (checkResult.rows.length === 0) {
+                await client.query('ROLLBACK');
                 return res.status(404).json({
                     success: false,
                     message: 'Reservation not found'
                 });
             }
 
+            // Delete the reservation
+            await client.query(
+                'DELETE FROM reservations WHERE id = $1',
+                [id]
+            );
+
+            await client.query('COMMIT');
+
             res.json({
                 success: true,
                 message: 'Reservation deleted successfully'
             });
         } catch (error) {
+            await client.query('ROLLBACK');
             console.error('Error deleting reservation:', error);
             res.status(500).json({
                 success: false,
-                message: 'Failed to delete reservation'
+                message: 'Failed to delete reservation',
+                error: error.message
             });
+        } finally {
+            client.release();
         }
     });
 

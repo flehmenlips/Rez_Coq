@@ -10,6 +10,7 @@ const session = require('express-session');
 const cookieParser = require('cookie-parser');
 const auth = require('./middleware/auth');
 const authRoutes = require('./routes/auth');
+const adminRoutes = require('./routes/admin');
 let db; // Global database connection
 
 // At the top of the file, add a logging utility
@@ -659,6 +660,25 @@ try {
                 db.close();
             }
             process.exit(0);
+        });
+
+        // Apply auth middleware to all routes
+        app.use(auth.auth);
+
+        // Routes
+        app.use('/api/auth', authRoutes);
+        app.use('/api/reservations', reservationRoutes);
+        app.use('/api/settings', settingsRoutes);
+        app.use('/api/admin', adminRoutes());  // Note the () to invoke the function
+
+        // Add error handling middleware
+        app.use((err, req, res, next) => {
+            console.error('Global error handler:', err);
+            res.status(err.status || 500).json({
+                success: false,
+                message: err.message || 'Internal server error',
+                error: process.env.NODE_ENV === 'development' ? err.stack : undefined
+            });
         });
 
         module.exports = app
