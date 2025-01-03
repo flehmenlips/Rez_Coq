@@ -5,16 +5,38 @@ const { query } = require('../utils/db');
 // Get available times
 router.get('/available-times', async (req, res) => {
     try {
-        // Get settings
-        const settingsResult = await query('SELECT * FROM settings');
-        const settings = {};
-        settingsResult.rows.forEach(row => {
-            settings[row.key] = row.value;
+        console.log('Fetching available times');
+        
+        // Get settings in a single query
+        const settingsResult = await query(`
+            SELECT key, value FROM settings 
+            WHERE key IN ('opening_time', 'closing_time', 'slot_duration')
+        `);
+        
+        // Convert settings to object with defaults
+        const settings = settingsResult.rows.reduce((acc, row) => {
+            acc[row.key] = row.value;
+            return acc;
+        }, {
+            opening_time: '11:00',
+            closing_time: '22:00',
+            slot_duration: '60'
         });
 
-        const openTime = settings.opening_time || '11:00';
-        const closeTime = settings.closing_time || '22:00';
-        const duration = parseInt(settings.slot_duration || '60');
+        console.log('Settings loaded:', settings);
+
+        // Parse times
+        const openTime = settings.opening_time;
+        const closeTime = settings.closing_time;
+        const duration = parseInt(settings.slot_duration);
+
+        if (!openTime || !closeTime || isNaN(duration)) {
+            console.error('Invalid settings:', { openTime, closeTime, duration });
+            return res.status(500).json({
+                success: false,
+                message: 'Invalid time settings'
+            });
+        }
 
         // Generate time slots
         const slots = [];
@@ -30,7 +52,11 @@ router.get('/available-times', async (req, res) => {
             currentTime.setMinutes(currentTime.getMinutes() + duration);
         }
 
-        res.json(slots);
+        console.log(`Generated ${slots.length} time slots`);
+        res.json({
+            success: true,
+            slots: slots
+        });
     } catch (error) {
         console.error('Error getting available times:', error);
         res.status(500).json({ 
