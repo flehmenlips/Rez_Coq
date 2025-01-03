@@ -184,23 +184,23 @@ async function deleteReservation(id) {
 async function loadSettings() {
     try {
         const response = await fetch('/api/settings');
+        if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+        }
         const settings = await response.json();
         
-        // Populate existing fields
-        document.getElementById('openTime').value = settings.open_time || '';
-        document.getElementById('closeTime').value = settings.close_time || '';
-        document.getElementById('maxPartySize').value = settings.max_party_size || '';
-        document.getElementById('dailyMaxGuests').value = settings.daily_max_guests || '';
-        document.getElementById('slotDuration').value = settings.slot_duration || '';
-        
-        // Populate new fields
+        // Update to use correct element IDs matching the HTML
+        document.getElementById('opening_time').value = settings.opening_time || '';
+        document.getElementById('closing_time').value = settings.closing_time || '';
+        document.getElementById('max_party_size').value = settings.max_party_size || '';
+        document.getElementById('daily_max_guests').value = settings.daily_max_guests || '';
         document.getElementById('availabilityWindow').value = settings.availability_window || '60';
         document.getElementById('windowUpdateTime').value = settings.window_update_time || '00:00';
         
         console.log('Settings loaded successfully');
     } catch (error) {
         console.error('Error loading settings:', error);
-        showError('Failed to load settings. Please try again.');
+        showAlert('Failed to load settings. Please try again.', 'danger');
     }
 }
 
@@ -236,19 +236,21 @@ async function saveSettings(event) {
         const response = await fetch('/api/settings', {
             method: 'POST',
             headers: {
-                'Content-Type': 'application/json'
+                'Content-Type': 'application/json',
+                'Accept': 'application/json'
             },
             body: JSON.stringify(settings)
         });
         
         if (!response.ok) {
-            throw new Error('Failed to save settings');
+            const errorData = await response.json().catch(() => ({}));
+            throw new Error(errorData.message || 'Failed to save settings');
         }
         
-        showSuccess('Settings saved successfully');
+        showAlert('Settings saved successfully', 'success');
     } catch (error) {
         console.error('Error saving settings:', error);
-        showError(error.message || 'Failed to save settings. Please try again.');
+        showAlert(error.message || 'Failed to save settings. Please try again.', 'danger');
     } finally {
         submitButton.disabled = false;
         submitButton.textContent = originalText;
@@ -389,4 +391,12 @@ function showAlert(message, type = 'info') {
     setTimeout(() => {
         alert.remove();
     }, 5000);
+}
+
+function showError(message) {
+    showAlert(message, 'danger');
+}
+
+function showSuccess(message) {
+    showAlert(message, 'success');
 } 
