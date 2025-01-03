@@ -134,17 +134,61 @@ app.use(cookieParser());
 app.use(session({
     store: new ConnectPgSimple({
         pool: pool,
-        tableName: 'session'
+        tableName: 'session',
+        pruneSessionInterval: 60 // Cleanup every minute
     }),
     secret: process.env.SESSION_SECRET,
     resave: false,
     saveUninitialized: false,
+    name: 'rez_coq_sid', // Custom cookie name
     cookie: {
-        secure: false,
+        secure: process.env.NODE_ENV === 'production', // Only send cookie over HTTPS in production
         httpOnly: true,
-        maxAge: 24 * 60 * 60 * 1000 // 24 hours
-    }
+        sameSite: 'strict',
+        maxAge: 8 * 60 * 60 * 1000 // 8 hours instead of 24
+    },
+    rolling: true // Reset maxAge on every response
 }));
+
+// Add security headers middleware
+app.use((req, res, next) => {
+    res.set({
+        'Cache-Control': 'no-store, no-cache, must-revalidate, proxy-revalidate',
+        'Pragma': 'no-cache',
+        'Expires': '0',
+        'Surrogate-Control': 'no-store',
+        'X-Frame-Options': 'DENY'
+    });
+    next();
+});
+
+// Session check middleware
+app.use((req, res, next) => {
+    if (req.session && req.session.user) {
+        // Check if session is expired
+        const now = new Date().getTime();
+        const sessionStart = new Date(req.session.created || now).getTime();
+        const maxAge = 8 * 60 * 60 * 1000; // 8 hours in milliseconds
+
+        if (now - sessionStart > maxAge) {
+            req.session.destroy((err) => {
+                if (err) {
+                    console.error('Session destruction error:', err);
+                }
+                if (req.xhr || req.path.startsWith('/api/')) {
+                    return res.status(401).json({ message: 'Session expired' });
+                }
+                return res.redirect('/login');
+            });
+        } else {
+            // Update session timestamp if needed
+            if (!req.session.created) {
+                req.session.created = now;
+            }
+        }
+    }
+    next();
+});
 
 // Routes
 app.use('/api/auth', authRoutes);

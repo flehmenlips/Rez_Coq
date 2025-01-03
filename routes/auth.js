@@ -9,6 +9,17 @@ const authRoutes = (pool) => {
         
         try {
             console.log('Login attempt for:', username);
+            
+            // Clear any existing session first
+            if (req.session) {
+                await new Promise((resolve, reject) => {
+                    req.session.destroy((err) => {
+                        if (err) reject(err);
+                        resolve();
+                    });
+                });
+            }
+            
             const result = await pool.query(
                 'SELECT * FROM users WHERE username = $1',
                 [username]
@@ -34,21 +45,30 @@ const authRoutes = (pool) => {
                 return res.json({ success: false, message: 'Not authorized as admin' });
             }
             
-            // Set session
-            req.session.user = {
-                id: user.id,
-                username: user.username,
-                role: user.role,
-                email: user.email
-            };
-            
-            console.log('Login successful for:', username);
-            console.log('Session data:', req.session);
-            
-            res.json({ 
-                success: true, 
-                role: user.role,
-                message: 'Login successful' 
+            // Create new session
+            req.session.regenerate((err) => {
+                if (err) {
+                    console.error('Session regeneration error:', err);
+                    return res.json({ success: false, message: 'Login failed' });
+                }
+                
+                // Set session data
+                req.session.user = {
+                    id: user.id,
+                    username: user.username,
+                    role: user.role,
+                    email: user.email
+                };
+                req.session.created = new Date().getTime();
+                
+                console.log('Login successful for:', username);
+                console.log('Session data:', req.session);
+                
+                res.json({ 
+                    success: true, 
+                    role: user.role,
+                    message: 'Login successful' 
+                });
             });
             
         } catch (error) {
@@ -130,14 +150,40 @@ const authRoutes = (pool) => {
 
     // Logout route
     router.post('/logout', (req, res) => {
-        req.session.destroy((err) => {
-            if (err) {
-                console.error('Logout error:', err);
-                return res.json({ success: false, message: 'Logout failed' });
-            }
-            res.clearCookie('connect.sid');
-            res.json({ success: true, message: 'Logged out successfully' });
-        });
+        if (req.session) {
+            // First, clear the session data
+            req.session.user = null;
+            
+            // Then destroy the session
+            req.session.destroy((err) => {
+                if (err) {
+                    console.error('Logout error:', err);
+                    return res.status(500).json({ 
+                        success: false, 
+                        message: 'Logout failed' 
+                    });
+                }
+                
+                // Clear session cookie
+                res.clearCookie('rez_coq_sid', {
+                    path: '/',
+                    httpOnly: true,
+                    secure: process.env.NODE_ENV === 'production',
+                    sameSite: 'strict'
+                });
+                
+                res.json({ 
+                    success: true, 
+                    message: 'Logged out successfully' 
+                });
+            });
+        } else {
+            // If no session exists, just send success response
+            res.json({ 
+                success: true, 
+                message: 'Already logged out' 
+            });
+        }
     });
     
     return router;
