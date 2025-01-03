@@ -90,6 +90,19 @@
     </div>
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
-    <script src="js/login.js"></script>
+    <script>
+        // Verify script loading
+        console.log('Login page loaded');
+        window.addEventListener('DOMContentLoaded', () => {
+            console.log('DOM fully loaded');
+            const form = document.getElementById('loginForm');
+            if (form) {
+                console.log('Login form found');
+            } else {
+                console.error('Login form not found');
+            }
+        });
+    </script>
+    <script src="/js/login.js"></script>
 </body>
 </html> 
