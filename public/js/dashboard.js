@@ -1,3 +1,12 @@
+// Global variables for sorting and filtering
+let currentSort = { field: 'date', direction: 'desc' };
+let currentFilters = {
+    startDate: null,
+    endDate: null,
+    search: ''
+};
+let allReservations = [];
+
 // Load settings
 async function loadSettings() {
     try {
@@ -20,48 +29,197 @@ async function loadSettings() {
     }
 }
 
-// Load reservations
+// Update statistics
+function updateStatistics(reservations) {
+    const today = new Date().toISOString().split('T')[0];
+    const todayReservations = reservations.filter(r => r.date.startsWith(today));
+    const todayGuests = todayReservations.reduce((sum, r) => sum + parseInt(r.guests), 0);
+    
+    const weekStart = new Date();
+    weekStart.setDate(weekStart.getDate() - 7);
+    const weeklyReservations = reservations.filter(r => new Date(r.date) >= weekStart);
+    const pendingEmails = reservations.filter(r => r.email_status === 'pending').length;
+
+    document.getElementById('todayCount').textContent = todayReservations.length;
+    document.getElementById('todayGuests').textContent = todayGuests;
+    document.getElementById('weeklyTotal').textContent = weeklyReservations.length;
+    document.getElementById('pendingEmails').textContent = pendingEmails;
+}
+
+// Filter reservations
+function filterReservations(reservations) {
+    return reservations.filter(reservation => {
+        // Date filter
+        if (currentFilters.startDate && reservation.date < currentFilters.startDate) return false;
+        if (currentFilters.endDate && reservation.date > currentFilters.endDate) return false;
+        
+        // Search filter
+        if (currentFilters.search) {
+            const searchTerm = currentFilters.search.toLowerCase();
+            return reservation.name.toLowerCase().includes(searchTerm) ||
+                   reservation.email.toLowerCase().includes(searchTerm);
+        }
+        
+        return true;
+    });
+}
+
+// Sort reservations
+function sortReservations(reservations) {
+    return [...reservations].sort((a, b) => {
+        let aVal = a[currentSort.field];
+        let bVal = b[currentSort.field];
+        
+        // Handle date comparison
+        if (currentSort.field === 'date' || currentSort.field === 'time') {
+            aVal = new Date(`${a.date}T${a.time}`);
+            bVal = new Date(`${b.date}T${b.time}`);
+        }
+        
+        // Handle numeric comparison
+        if (currentSort.field === 'guests') {
+            aVal = parseInt(aVal);
+            bVal = parseInt(bVal);
+        }
+        
+        const comparison = aVal > bVal ? 1 : aVal < bVal ? -1 : 0;
+        return currentSort.direction === 'asc' ? comparison : -comparison;
+    });
+}
+
+// Render reservations table
+function renderReservationsTable(reservations) {
+    const tbody = document.getElementById('reservationsTable');
+    tbody.innerHTML = '';
+    
+    if (reservations.length === 0) {
+        tbody.innerHTML = `
+            <tr>
+                <td colspan="7" class="text-center">No reservations found</td>
+            </tr>
+        `;
+        return;
+    }
+    
+    reservations.forEach(reservation => {
+        const row = document.createElement('tr');
+        row.innerHTML = `
+            <td>${new Date(reservation.date).toLocaleDateString()}</td>
+            <td>${reservation.time}</td>
+            <td>${reservation.name}</td>
+            <td>${reservation.email}</td>
+            <td>${reservation.guests}</td>
+            <td>
+                <span class="badge bg-${reservation.email_status === 'sent' ? 'success' : 'warning'}">
+                    ${reservation.email_status}
+                </span>
+            </td>
+            <td>
+                <button class="btn btn-sm btn-outline-primary me-1" onclick="editReservation('${reservation.id}')">
+                    <i class="bi bi-pencil"></i>
+                </button>
+                <button class="btn btn-sm btn-outline-danger" onclick="cancelReservation('${reservation.id}')">
+                    <i class="bi bi-trash"></i>
+                </button>
+            </td>
+        `;
+        tbody.appendChild(row);
+    });
+}
+
+// Load and display reservations
 async function loadReservations() {
+    const spinner = document.getElementById('loadingSpinner');
+    spinner.classList.remove('d-none');
+    
     try {
         const response = await fetch('/api/reservations');
         if (!response.ok) throw new Error('Failed to load reservations');
-        const reservations = await response.json();
         
-        const tbody = document.getElementById('reservationsTable');
-        tbody.innerHTML = '';
+        allReservations = await response.json();
+        updateStatistics(allReservations);
         
-        if (reservations.length === 0) {
-            tbody.innerHTML = `
-                <tr>
-                    <td colspan="6" class="text-center">No reservations found</td>
-                </tr>
-            `;
-            return;
-        }
-        
-        reservations.forEach(reservation => {
-            const row = document.createElement('tr');
-            row.innerHTML = `
-                <td>${new Date(reservation.date).toLocaleDateString()}</td>
-                <td>${reservation.time}</td>
-                <td>${reservation.name}</td>
-                <td>${reservation.email}</td>
-                <td>${reservation.guests}</td>
-                <td>${reservation.email_status}</td>
-            `;
-            tbody.appendChild(row);
-        });
+        const filtered = filterReservations(allReservations);
+        const sorted = sortReservations(filtered);
+        renderReservationsTable(sorted);
     } catch (error) {
         console.error('Error loading reservations:', error);
         document.getElementById('reservationsTable').innerHTML = `
             <tr>
-                <td colspan="6" class="text-center text-danger">
+                <td colspan="7" class="text-center text-danger">
                     Error loading reservations: ${error.message}
                 </td>
             </tr>
         `;
+    } finally {
+        spinner.classList.add('d-none');
     }
 }
+
+// Edit reservation
+async function editReservation(id) {
+    // Implementation will be added later
+    alert('Edit functionality coming soon!');
+}
+
+// Cancel reservation
+async function cancelReservation(id) {
+    if (!confirm('Are you sure you want to cancel this reservation?')) return;
+    
+    try {
+        const response = await fetch(`/api/reservations/${id}`, {
+            method: 'DELETE'
+        });
+        
+        if (!response.ok) throw new Error('Failed to cancel reservation');
+        
+        await loadReservations();
+        alert('Reservation cancelled successfully!');
+    } catch (error) {
+        console.error('Error cancelling reservation:', error);
+        alert('Failed to cancel reservation: ' + error.message);
+    }
+}
+
+// Event Listeners
+document.addEventListener('DOMContentLoaded', () => {
+    loadSettings();
+    loadReservations();
+    
+    // Sort headers
+    document.querySelectorAll('th.sortable').forEach(th => {
+        th.addEventListener('click', () => {
+            const field = th.dataset.sort;
+            if (currentSort.field === field) {
+                currentSort.direction = currentSort.direction === 'asc' ? 'desc' : 'asc';
+            } else {
+                currentSort.field = field;
+                currentSort.direction = 'asc';
+            }
+            const sorted = sortReservations(filterReservations(allReservations));
+            renderReservationsTable(sorted);
+        });
+    });
+    
+    // Filter controls
+    document.getElementById('applyFilters').addEventListener('click', () => {
+        currentFilters.startDate = document.getElementById('startDate').value;
+        currentFilters.endDate = document.getElementById('endDate').value;
+        currentFilters.search = document.getElementById('searchInput').value;
+        const filtered = filterReservations(allReservations);
+        const sorted = sortReservations(filtered);
+        renderReservationsTable(sorted);
+    });
+    
+    document.getElementById('resetFilters').addEventListener('click', () => {
+        document.getElementById('startDate').value = '';
+        document.getElementById('endDate').value = '';
+        document.getElementById('searchInput').value = '';
+        currentFilters = { startDate: null, endDate: null, search: '' };
+        const sorted = sortReservations(allReservations);
+        renderReservationsTable(sorted);
+    });
+});
 
 // Save settings
 document.getElementById('settingsForm').addEventListener('submit', async (e) => {

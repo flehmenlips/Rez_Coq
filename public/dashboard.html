@@ -113,6 +113,76 @@
         .table th {
             font-weight: 600;
             color: #2c3e50;
+            cursor: pointer;
+            transition: color 0.2s;
+        }
+
+        .table th:hover {
+            color: #4CAF50;
+        }
+
+        .table th i {
+            font-size: 0.8rem;
+            margin-left: 0.5rem;
+            opacity: 0.5;
+        }
+
+        .table tbody tr {
+            transition: background-color 0.2s;
+        }
+
+        .table tbody tr:hover {
+            background-color: #f8f9fa;
+        }
+
+        .card {
+            border: none;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            transition: transform 0.2s;
+        }
+
+        .card:hover {
+            transform: translateY(-2px);
+        }
+
+        .card-body {
+            padding: 1.5rem;
+        }
+
+        .card h3 {
+            font-size: 2rem;
+            margin: 0;
+            font-weight: 500;
+        }
+
+        .card-title {
+            font-size: 0.9rem;
+            margin-bottom: 0.5rem;
+            opacity: 0.9;
+        }
+
+        .badge {
+            padding: 0.5rem 0.75rem;
+            font-weight: 500;
+        }
+
+        .btn-sm {
+            padding: 0.25rem 0.5rem;
+        }
+
+        .btn-sm i {
+            font-size: 0.9rem;
+        }
+
+        .input-group {
+            box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+        }
+
+        .input-group-text {
+            background-color: #f8f9fa;
+            border-color: #dee2e6;
+            color: #6c757d;
         }
 
         @media (max-width: 768px) {
@@ -122,6 +192,14 @@
             
             .settings-card {
                 padding: 1.5rem;
+            }
+
+            .card {
+                margin-bottom: 1rem;
+            }
+
+            .input-group {
+                margin-bottom: 1rem;
             }
         }
     </style>
@@ -211,17 +289,75 @@
         </div>
 
         <div class="reservations-section">
-            <h2>Current Reservations</h2>
+            <h2>Reservations Overview</h2>
+            
+            <!-- Statistics Summary -->
+            <div class="row mb-4">
+                <div class="col-md-3">
+                    <div class="card bg-primary text-white">
+                        <div class="card-body">
+                            <h5 class="card-title">Today's Reservations</h5>
+                            <h3 id="todayCount">-</h3>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="card bg-success text-white">
+                        <div class="card-body">
+                            <h5 class="card-title">Today's Guests</h5>
+                            <h3 id="todayGuests">-</h3>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="card bg-info text-white">
+                        <div class="card-body">
+                            <h5 class="card-title">Weekly Total</h5>
+                            <h3 id="weeklyTotal">-</h3>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="card bg-warning text-white">
+                        <div class="card-body">
+                            <h5 class="card-title">Pending Emails</h5>
+                            <h3 id="pendingEmails">-</h3>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Filters and Search -->
+            <div class="row mb-3">
+                <div class="col-md-4">
+                    <div class="input-group">
+                        <span class="input-group-text">Date Range</span>
+                        <input type="date" class="form-control" id="startDate">
+                        <input type="date" class="form-control" id="endDate">
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="input-group">
+                        <span class="input-group-text">Search</span>
+                        <input type="text" class="form-control" id="searchInput" placeholder="Search name or email...">
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <button class="btn btn-primary" id="applyFilters">Apply Filters</button>
+                    <button class="btn btn-outline-secondary" id="resetFilters">Reset</button>
+                </div>
+            </div>
+
             <div class="table-responsive">
-                <table class="table">
+                <table class="table table-hover">
                     <thead>
                         <tr>
-                            <th>Date</th>
-                            <th>Time</th>
-                            <th>Name</th>
-                            <th>Email</th>
-                            <th>Guests</th>
-                            <th>Email Status</th>
+                            <th class="sortable" data-sort="date">Date <i class="bi bi-arrow-down-up"></i></th>
+                            <th class="sortable" data-sort="time">Time <i class="bi bi-arrow-down-up"></i></th>
+                            <th class="sortable" data-sort="name">Name <i class="bi bi-arrow-down-up"></i></th>
+                            <th class="sortable" data-sort="email">Email <i class="bi bi-arrow-down-up"></i></th>
+                            <th class="sortable" data-sort="guests">Guests <i class="bi bi-arrow-down-up"></i></th>
+                            <th class="sortable" data-sort="email_status">Email Status <i class="bi bi-arrow-down-up"></i></th>
                             <th>Actions</th>
                         </tr>
                     </thead>
@@ -229,6 +365,13 @@
                         <!-- Reservations will be populated here -->
                     </tbody>
                 </table>
+            </div>
+
+            <!-- Loading Spinner -->
+            <div id="loadingSpinner" class="text-center d-none">
+                <div class="spinner-border text-primary" role="status">
+                    <span class="visually-hidden">Loading...</span>
+                </div>
             </div>
         </div>
 
