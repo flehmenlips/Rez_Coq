@@ -15,6 +15,14 @@ const authRoutes = (pool) => {
                 user: req.session?.user
             });
             
+            // Validate input
+            if (!username || !password) {
+                return res.status(400).json({
+                    success: false,
+                    message: 'Username and password are required'
+                });
+            }
+            
             const result = await pool.query(
                 'SELECT * FROM users WHERE username = $1',
                 [username]
@@ -24,20 +32,29 @@ const authRoutes = (pool) => {
             
             if (!user) {
                 console.log('User not found:', username);
-                return res.json({ success: false, message: 'Invalid username or password' });
+                return res.status(401).json({
+                    success: false,
+                    message: 'Invalid username or password'
+                });
             }
             
             // Verify password
             const validPassword = await bcrypt.compare(password, user.password_hash);
             if (!validPassword) {
                 console.log('Invalid password for user:', username);
-                return res.json({ success: false, message: 'Invalid username or password' });
+                return res.status(401).json({
+                    success: false,
+                    message: 'Invalid username or password'
+                });
             }
             
             // Check role matches type
             if (type === 'admin' && user.role !== 'admin') {
                 console.log('Unauthorized admin access attempt for:', username);
-                return res.json({ success: false, message: 'Not authorized as admin' });
+                return res.status(403).json({
+                    success: false,
+                    message: 'Not authorized as admin'
+                });
             }
 
             // Update last login time
@@ -73,7 +90,7 @@ const authRoutes = (pool) => {
                 user: req.session?.user
             });
             
-            res.json({ 
+            return res.status(200).json({ 
                 success: true, 
                 role: user.role,
                 message: 'Login successful' 
@@ -81,7 +98,11 @@ const authRoutes = (pool) => {
             
         } catch (error) {
             console.error('Login error:', error);
-            res.json({ success: false, message: 'Login failed' });
+            return res.status(500).json({
+                success: false,
+                message: 'Internal server error',
+                error: process.env.NODE_ENV === 'development' ? error.message : undefined
+            });
         }
     });
     

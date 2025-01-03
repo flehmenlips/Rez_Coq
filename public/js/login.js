@@ -24,52 +24,73 @@ document.getElementById('loginForm').addEventListener('submit', async (e) => {
     e.preventDefault();
     const form = e.target;
     const submitButton = form.querySelector('button');
+    const username = form.username.value;
+    const password = form.password.value;
+    
+    // Disable submit button and show loading state
     submitButton.disabled = true;
+    submitButton.innerHTML = '<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Logging in...';
     
     try {
-        console.log('Attempting login with type:', currentLoginType);
+        console.log('Login attempt:', { username, type: currentLoginType });
+        
+        // Clear any existing messages
+        showMessage('', '');
+        
         const response = await fetch('/api/auth/login', {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
+            headers: { 
+                'Content-Type': 'application/json',
+                'Accept': 'application/json'
+            },
             credentials: 'same-origin',
             body: JSON.stringify({
-                username: form.username.value,
-                password: form.password.value,
+                username,
+                password,
                 type: currentLoginType
             })
         });
         
-        console.log('Login response status:', response.status);
+        console.log('Response status:', response.status);
+        console.log('Response headers:', Object.fromEntries([...response.headers]));
+        
         const result = await response.json();
         console.log('Login result:', result);
         
         if (result.success) {
-            if (result.role === 'admin') {
-                window.location.href = '/dashboard';
-            } else {
-                window.location.href = '/customer-dashboard';
-            }
+            showMessage('Login successful, redirecting...', 'success');
+            setTimeout(() => {
+                window.location.href = result.role === 'admin' ? '/dashboard' : '/customer-dashboard';
+            }, 500);
         } else {
             showMessage(result.message || 'Login failed', 'danger');
+            submitButton.disabled = false;
+            submitButton.textContent = 'Login';
         }
     } catch (error) {
         console.error('Login error:', error);
         showMessage('Login failed. Please try again.', 'danger');
-    } finally {
         submitButton.disabled = false;
+        submitButton.textContent = 'Login';
     }
 });
 
 function showMessage(message, type) {
     const messageDiv = document.getElementById('loginMessage');
+    if (!message) {
+        messageDiv.style.display = 'none';
+        return;
+    }
     messageDiv.textContent = message;
     messageDiv.className = `alert alert-${type} mt-3`;
     messageDiv.style.display = 'block';
     
-    // Clear message after 5 seconds
-    setTimeout(() => {
-        messageDiv.style.display = 'none';
-    }, 5000);
+    if (type !== 'success') {
+        // Clear error messages after 5 seconds
+        setTimeout(() => {
+            messageDiv.style.display = 'none';
+        }, 5000);
+    }
 }
 
 // Check if we were redirected here
