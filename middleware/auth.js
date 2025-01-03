@@ -1,19 +1,20 @@
 // Authentication middleware
 const auth = (req, res, next) => {
-    // Skip authentication for public routes and static files
+    // Skip authentication for public routes
     const publicPaths = [
         '/api/auth/login',
         '/api/auth/register',
         '/api/auth/logout',
         '/login',
         '/register',
-        '/css',
-        '/js',
-        '/img'
+        '/css/',
+        '/js/',
+        '/img/',
+        '/favicon.ico'
     ];
 
-    // Check if the path starts with any of the public paths
-    if (publicPaths.some(path => req.path.startsWith(path))) {
+    // Skip auth for public paths
+    if (publicPaths.some(path => req.path === path || req.path.startsWith(path))) {
         return next();
     }
 

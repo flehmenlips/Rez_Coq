@@ -45,6 +45,12 @@ app.use(session({
     }
 }));
 
+// Serve static files that don't require auth
+app.use(express.static(path.join(__dirname, 'public')));
+
+// Auth routes (don't require authentication)
+app.use('/api/auth', authRoutes);
+
 // Routes that don't require authentication
 app.get('/', (req, res) => {
     if (!req.session?.user) {
@@ -70,14 +76,6 @@ app.get('/register', (req, res) => {
     res.sendFile(path.join(__dirname, 'public', 'register.html'));
 });
 
-// Auth routes (don't require authentication)
-app.use('/api/auth', authRoutes);
-
-// Static files that don't require auth
-app.use(express.static(path.join(__dirname, 'public', 'css')));
-app.use(express.static(path.join(__dirname, 'public', 'js')));
-app.use(express.static(path.join(__dirname, 'public', 'img')));
-
 // Apply auth middleware to protected routes
 app.use(auth);
 
@@ -92,9 +90,6 @@ app.get('/dashboard', (req, res) => {
 app.get('/user-settings', (req, res) => {
     res.sendFile(path.join(__dirname, 'public', 'user-settings.html'));
 });
-
-// Protected static files
-app.use('/protected', express.static(path.join(__dirname, 'public', 'protected')));
 
 // API routes (all require authentication)
 app.use('/api/settings', settingsRoutes);
