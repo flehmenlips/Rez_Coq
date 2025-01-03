@@ -62,6 +62,18 @@ const authRoutes = (pool) => {
                 'UPDATE users SET last_login = CURRENT_TIMESTAMP WHERE id = $1',
                 [user.id]
             );
+
+            // Regenerate session
+            await new Promise((resolve, reject) => {
+                req.session.regenerate((err) => {
+                    if (err) {
+                        console.error('Session regeneration error:', err);
+                        reject(err);
+                    } else {
+                        resolve();
+                    }
+                });
+            });
             
             // Set session data
             req.session.user = {

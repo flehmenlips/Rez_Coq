@@ -134,11 +134,12 @@ app.use(cookieParser());
 app.use(session({
     store: new ConnectPgSimple({
         pool: pool,
-        tableName: 'session'
+        tableName: 'session',
+        createTableIfMissing: true
     }),
     secret: process.env.SESSION_SECRET || 'your-secret-key',
     resave: true,
-    saveUninitialized: true,
+    saveUninitialized: false,
     cookie: {
         secure: process.env.NODE_ENV === 'production',
         httpOnly: true,
@@ -148,6 +149,7 @@ app.use(session({
 
 // Add session debugging middleware
 app.use((req, res, next) => {
+    console.log('Request path:', req.path);
     console.log('Session Debug:', {
         sessionID: req.sessionID,
         hasSession: !!req.session,
@@ -174,28 +176,36 @@ app.use('/api/admin', adminRoutes);
 
 // Serve static HTML pages
 app.get('/login', (req, res) => {
+    // If already logged in, redirect to appropriate dashboard
+    if (req.session?.user) {
+        return res.redirect(req.session.user.role === 'admin' ? '/dashboard' : '/customer-dashboard');
+    }
     res.sendFile(path.join(__dirname, 'public', 'login.html'));
 });
 
 app.get('/register', (req, res) => {
+    if (req.session?.user) {
+        return res.redirect(req.session.user.role === 'admin' ? '/dashboard' : '/customer-dashboard');
+    }
     res.sendFile(path.join(__dirname, 'public', 'register.html'));
 });
 
 app.get('/customer-dashboard', (req, res) => {
+    console.log('Customer dashboard request:', {
+        session: req.session,
+        user: req.session?.user
+    });
     if (!req.session?.user) {
         return res.redirect('/login');
     }
     res.sendFile(path.join(__dirname, 'public', 'customer-dashboard.html'));
 });
 
-app.get('/user-settings', (req, res) => {
-    if (!req.session?.user) {
-        return res.redirect('/login');
-    }
-    res.sendFile(path.join(__dirname, 'public', 'user-settings.html'));
-});
-
 app.get('/dashboard', (req, res) => {
+    console.log('Admin dashboard request:', {
+        session: req.session,
+        user: req.session?.user
+    });
     if (!req.session?.user || req.session.user.role !== 'admin') {
         return res.redirect('/login');
     }
@@ -203,7 +213,6 @@ app.get('/dashboard', (req, res) => {
 });
 
 app.get('/', (req, res) => {
-    // Redirect to login if not authenticated
     if (!req.session?.user) {
         return res.redirect('/login');
     }
