@@ -16,7 +16,11 @@ router.get('/', async (req, res) => {
         res.json(settings);
     } catch (error) {
         console.error('Error fetching settings:', error);
-        res.status(500).json({ error: error.message });
+        res.status(500).json({ 
+            success: false,
+            message: 'Failed to fetch settings',
+            error: error.message 
+        });
     }
 });
 
@@ -44,6 +48,7 @@ router.post('/', async (req, res) => {
         console.error('Error updating settings:', error);
         res.status(500).json({ 
             success: false,
+            message: 'Failed to update settings',
             error: error.message 
         });
     }
