@@ -1,5 +1,6 @@
 const express = require('express');
 const router = express.Router();
+const pool = require('../utils/db');
 const { getReservations, createReservation, getSettings } = require('../utils/db-queries');
 
 const reservationRoutes = () => {
@@ -80,11 +81,11 @@ const reservationRoutes = () => {
             
             // Get total guests for the day
             const existingReservations = await pool.query(
-                'SELECT SUM(guests) as total_guests FROM reservations WHERE date = $1',
+                'SELECT COALESCE(SUM(guests), 0) as total_guests FROM reservations WHERE date = $1',
                 [date]
             );
             
-            const currentTotal = parseInt(existingReservations.rows[0]?.total_guests || 0);
+            const currentTotal = parseInt(existingReservations.rows[0].total_guests);
             const newTotal = currentTotal + parseInt(guests);
             
             // Validate against daily maximum
@@ -119,13 +120,13 @@ const reservationRoutes = () => {
             }
 
             const result = await pool.query(
-                'SELECT SUM(guests) as total_guests FROM reservations WHERE date = $1',
+                'SELECT COALESCE(SUM(guests), 0) as total_guests FROM reservations WHERE date = $1',
                 [date]
             );
 
             res.json({
                 success: true,
-                total_guests: result.rows[0]?.total_guests || 0
+                total_guests: parseInt(result.rows[0].total_guests)
             });
         } catch (error) {
             console.error('Error getting daily guest count:', error);
