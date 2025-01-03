@@ -641,26 +641,44 @@ try {
             }
         });
 
-        // Modified server start with better error handling
-        const server = app.listen(PORT, () => {
-            log.info(`Server is running on port ${PORT}`);
-        }).on('error', (err) => {
-            if (err.code === 'EADDRINUSE') {
-                log.info(`Port ${PORT} is busy, trying ${PORT + 1}`);
-                server.close();
-                app.listen(PORT + 1);
-            } else {
-                log.error('Server error:', err);
-            }
-        });
+        // Import database initialization
+        const { initializeDatabase } = require('./utils/db-queries');
 
-        // Cleanup on exit
-        process.on('SIGINT', () => {
-            if (db) {
-                db.close();
+        // Initialize database before starting the server
+        async function startServer() {
+            try {
+                // Initialize database
+                await initializeDatabase();
+                
+                // Start server
+                const server = app.listen(PORT, () => {
+                    log.info(`Server is running on port ${PORT}`);
+                }).on('error', (err) => {
+                    if (err.code === 'EADDRINUSE') {
+                        log.info(`Port ${PORT} is busy, trying ${PORT + 1}`);
+                        server.close();
+                        app.listen(PORT + 1);
+                    } else {
+                        log.error('Server error:', err);
+                    }
+                });
+
+                // Cleanup on exit
+                process.on('SIGINT', () => {
+                    if (db) {
+                        db.close();
+                    }
+                    process.exit(0);
+                });
+
+            } catch (error) {
+                log.error('Failed to start server:', error);
+                process.exit(1);
             }
-            process.exit(0);
-        });
+        }
+
+        // Start the server
+        startServer();
 
         // Apply auth middleware to all routes
         app.use(auth.auth);

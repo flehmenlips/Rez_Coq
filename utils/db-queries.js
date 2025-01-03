@@ -187,7 +187,126 @@ async function initializeSettings() {
     }
 }
 
+// Initialize database tables
+async function initializeTables() {
+    const client = await pool.connect();
+    try {
+        await client.query('BEGIN');
+
+        // Create reservations table
+        await client.query(`
+            CREATE TABLE IF NOT EXISTS reservations (
+                id SERIAL PRIMARY KEY,
+                name TEXT NOT NULL,
+                email TEXT NOT NULL,
+                phone TEXT,
+                date DATE NOT NULL,
+                time TIME NOT NULL,
+                guests INTEGER NOT NULL,
+                status TEXT DEFAULT 'pending' CHECK (status IN ('pending', 'confirmed', 'cancelled', 'completed')),
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                email_status TEXT DEFAULT 'pending',
+                email_sent_at TIMESTAMP,
+                email_error TEXT
+            )
+        `);
+
+        // Create settings table
+        await client.query(`
+            CREATE TABLE IF NOT EXISTS settings (
+                key TEXT PRIMARY KEY,
+                value TEXT NOT NULL
+            )
+        `);
+
+        // Create users table
+        await client.query(`
+            CREATE TABLE IF NOT EXISTS users (
+                id SERIAL PRIMARY KEY,
+                username TEXT UNIQUE NOT NULL,
+                password_hash TEXT NOT NULL,
+                role TEXT NOT NULL DEFAULT 'customer' CHECK(role IN ('admin', 'customer')),
+                email TEXT UNIQUE,
+                verified BOOLEAN DEFAULT false,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                last_login TIMESTAMP,
+                settings_json TEXT
+            )
+        `);
+
+        // Initialize default settings if needed
+        await client.query(`
+            INSERT INTO settings (key, value)
+            VALUES 
+                ('daily_max_guests', '100'),
+                ('opening_time', '11:00'),
+                ('closing_time', '22:00'),
+                ('slot_duration', '30'),
+                ('max_party_size', '12'),
+                ('availability_window', '60'),
+                ('window_update_time', '00:00')
+            ON CONFLICT (key) DO NOTHING
+        `);
+
+        await client.query('COMMIT');
+        console.log('Database tables initialized successfully');
+    } catch (error) {
+        await client.query('ROLLBACK');
+        console.error('Error initializing database tables:', error);
+        throw error;
+    } finally {
+        client.release();
+    }
+}
+
+// Add status field to reservations table if it doesn't exist
+async function addStatusField() {
+    const client = await pool.connect();
+    try {
+        await client.query('BEGIN');
+
+        // Check if status column exists
+        const result = await client.query(`
+            SELECT column_name 
+            FROM information_schema.columns 
+            WHERE table_name = 'reservations' AND column_name = 'status'
+        `);
+
+        if (result.rows.length === 0) {
+            // Add status column
+            await client.query(`
+                ALTER TABLE reservations 
+                ADD COLUMN status TEXT DEFAULT 'pending' 
+                CHECK (status IN ('pending', 'confirmed', 'cancelled', 'completed'))
+            `);
+            console.log('Added status field to reservations table');
+        }
+
+        await client.query('COMMIT');
+    } catch (error) {
+        await client.query('ROLLBACK');
+        console.error('Error adding status field:', error);
+        throw error;
+    } finally {
+        client.release();
+    }
+}
+
+// Initialize database
+async function initializeDatabase() {
+    try {
+        await initializeTables();
+        await addStatusField();
+        console.log('Database initialization complete');
+    } catch (error) {
+        console.error('Database initialization failed:', error);
+        throw error;
+    }
+}
+
 module.exports = {
+    initializeDatabase,
     getUserByUsername,
     createUser,
     getReservations,
