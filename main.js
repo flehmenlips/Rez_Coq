@@ -137,14 +137,18 @@ app.use(session({
         tableName: 'session',
         createTableIfMissing: true
     }),
+    name: 'rez_coq_sid',
     secret: process.env.SESSION_SECRET || 'your-secret-key',
     resave: true,
     saveUninitialized: false,
     cookie: {
         secure: process.env.NODE_ENV === 'production',
         httpOnly: true,
-        maxAge: 24 * 60 * 60 * 1000 // 24 hours
-    }
+        sameSite: 'lax',
+        path: '/',
+        maxAge: 8 * 60 * 60 * 1000 // 8 hours
+    },
+    rolling: true // Reset maxAge on every response
 }));
 
 // Add session debugging middleware
@@ -153,7 +157,8 @@ app.use((req, res, next) => {
     console.log('Session Debug:', {
         sessionID: req.sessionID,
         hasSession: !!req.session,
-        user: req.session?.user
+        user: req.session?.user,
+        cookie: req.session?.cookie
     });
     next();
 });

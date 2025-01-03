@@ -83,7 +83,7 @@ const authRoutes = (pool) => {
                 email: user.email
             };
 
-            // Save session explicitly
+            // Save session explicitly and wait for completion
             await new Promise((resolve, reject) => {
                 req.session.save((err) => {
                     if (err) {
@@ -99,13 +99,16 @@ const authRoutes = (pool) => {
             console.log('Session after login:', {
                 sessionID: req.sessionID,
                 hasSession: !!req.session,
-                user: req.session?.user
+                user: req.session?.user,
+                cookie: req.session.cookie
             });
             
+            // Send response only after session is saved
             return res.status(200).json({ 
                 success: true, 
                 role: user.role,
-                message: 'Login successful' 
+                message: 'Login successful',
+                sessionID: req.sessionID // Add this for debugging
             });
             
         } catch (error) {
