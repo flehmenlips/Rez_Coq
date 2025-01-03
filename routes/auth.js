@@ -46,7 +46,7 @@ const authRoutes = (pool) => {
             }
             
             // Create new session
-            req.session.regenerate((err) => {
+            req.session.regenerate(async (err) => {
                 if (err) {
                     console.error('Session regeneration error:', err);
                     return res.json({ success: false, message: 'Login failed' });
@@ -60,6 +60,20 @@ const authRoutes = (pool) => {
                     email: user.email
                 };
                 req.session.created = new Date().getTime();
+                
+                // Save session before responding
+                await new Promise((resolve, reject) => {
+                    req.session.save((err) => {
+                        if (err) {
+                            console.error('Session save error:', err);
+                            reject(err);
+                            return;
+                        }
+                        resolve();
+                    });
+                }).catch(err => {
+                    return res.json({ success: false, message: 'Login failed' });
+                });
                 
                 console.log('Login successful for:', username);
                 console.log('Session data:', req.session);
@@ -149,20 +163,27 @@ const authRoutes = (pool) => {
     });
 
     // Logout route
-    router.post('/logout', (req, res) => {
+    router.post('/logout', async (req, res) => {
         if (req.session) {
-            // First, clear the session data
-            req.session.user = null;
-            
-            // Then destroy the session
-            req.session.destroy((err) => {
-                if (err) {
-                    console.error('Logout error:', err);
-                    return res.status(500).json({ 
-                        success: false, 
-                        message: 'Logout failed' 
+            try {
+                // First, clear the session data
+                req.session.user = null;
+                
+                // Save the cleared session
+                await new Promise((resolve, reject) => {
+                    req.session.save((err) => {
+                        if (err) reject(err);
+                        resolve();
                     });
-                }
+                });
+                
+                // Then destroy the session
+                await new Promise((resolve, reject) => {
+                    req.session.destroy((err) => {
+                        if (err) reject(err);
+                        resolve();
+                    });
+                });
                 
                 // Clear session cookie
                 res.clearCookie('rez_coq_sid', {
@@ -176,7 +197,13 @@ const authRoutes = (pool) => {
                     success: true, 
                     message: 'Logged out successfully' 
                 });
-            });
+            } catch (err) {
+                console.error('Logout error:', err);
+                return res.status(500).json({ 
+                    success: false, 
+                    message: 'Logout failed' 
+                });
+            }
         } else {
             // If no session exists, just send success response
             res.json({ 
