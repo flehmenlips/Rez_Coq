@@ -141,8 +141,9 @@ app.use(session({
     secret: process.env.SESSION_SECRET || 'your-secret-key',
     resave: true,
     saveUninitialized: false,
+    proxy: true, // Trust the reverse proxy
     cookie: {
-        secure: process.env.NODE_ENV === 'production',
+        secure: true, // Always use secure cookies in production
         httpOnly: true,
         sameSite: 'lax',
         path: '/',
@@ -153,7 +154,11 @@ app.use(session({
 
 // Add session debugging middleware
 app.use((req, res, next) => {
-    console.log('Request path:', req.path);
+    console.log('\nRequest Debug:');
+    console.log('Path:', req.path);
+    console.log('Protocol:', req.protocol);
+    console.log('Secure:', req.secure);
+    console.log('X-Forwarded-Proto:', req.get('x-forwarded-proto'));
     console.log('Session Debug:', {
         sessionID: req.sessionID,
         hasSession: !!req.session,

@@ -3,6 +3,10 @@ function auth(req, res, next) {
     console.log('\nAuth Middleware Debug:');
     console.log('Path:', req.path);
     console.log('Method:', req.method);
+    console.log('Headers:', {
+        'x-forwarded-proto': req.get('x-forwarded-proto'),
+        'x-forwarded-for': req.get('x-forwarded-for')
+    });
     console.log('Session:', {
         id: req.sessionID,
         hasSession: !!req.session,
@@ -30,12 +34,23 @@ function auth(req, res, next) {
     }
 
     // Check if session exists and is valid
-    if (!req.session?.user) {
-        console.log('No valid session found, redirecting to login');
+    if (!req.session) {
+        console.log('No session object found');
         if (req.xhr || req.path.startsWith('/api/')) {
             return res.status(401).json({
                 success: false,
-                message: 'Authentication required'
+                message: 'No session found'
+            });
+        }
+        return res.redirect('/login?error=No session found');
+    }
+
+    if (!req.session.user) {
+        console.log('No user in session');
+        if (req.xhr || req.path.startsWith('/api/')) {
+            return res.status(401).json({
+                success: false,
+                message: 'Session expired'
             });
         }
         return res.redirect('/login?error=Session expired');
@@ -51,7 +66,7 @@ function auth(req, res, next) {
 function requireAdmin(req, res, next) {
     if (!req.session?.user) {
         console.log('No session found in admin check');
-        return res.redirect('/login');
+        return res.redirect('/login?error=Admin session expired');
     }
     
     if (req.session.user.role !== 'admin') {
@@ -61,6 +76,7 @@ function requireAdmin(req, res, next) {
             message: 'Admin access required'
         });
     }
+    console.log('Admin check passed for:', req.session.user.username);
     next();
 }
 
