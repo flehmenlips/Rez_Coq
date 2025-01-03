@@ -9,18 +9,63 @@
 </head>
 <body>
     <div class="container mt-4">
-        <div class="d-flex justify-content-between align-items-center mb-4">
-            <h1>My Dashboard</h1>
-            <div>
-                <a href="/" class="btn btn-primary me-2">Make Reservation</a>
-                <a href="/user-settings" class="btn btn-secondary me-2">Account Settings</a>
-                <button id="logoutBtn" class="btn btn-outline-danger">Logout</button>
+        <!-- User Info Section -->
+        <div class="card mb-4">
+            <div class="card-body">
+                <div class="row align-items-center">
+                    <div class="col-md-8">
+                        <h2 class="card-title mb-0" id="welcomeMessage">Welcome back!</h2>
+                        <p class="text-muted mb-0" id="userEmail"></p>
+                        <p class="text-muted" id="memberSince"></p>
+                    </div>
+                    <div class="col-md-4 text-md-end">
+                        <a href="/api/auth/account" class="btn btn-secondary">Account Settings</a>
+                        <button id="logoutBtn" class="btn btn-outline-danger ms-2">Logout</button>
+                    </div>
+                </div>
             </div>
         </div>
 
-        <div class="card">
-            <div class="card-header">
-                <h3>My Reservations</h3>
+        <!-- Quick Actions -->
+        <div class="row mb-4">
+            <div class="col-md-4">
+                <div class="card h-100">
+                    <div class="card-body text-center">
+                        <h5 class="card-title">New Reservation</h5>
+                        <p class="card-text">Book a new table at our restaurant</p>
+                        <a href="/" class="btn btn-primary">Make Reservation</a>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="card h-100">
+                    <div class="card-body text-center">
+                        <h5 class="card-title">Upcoming Reservations</h5>
+                        <p class="card-text" id="upcomingCount">Loading...</p>
+                        <button class="btn btn-outline-primary" onclick="scrollToReservations()">View All</button>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="card h-100">
+                    <div class="card-body text-center">
+                        <h5 class="card-title">Need Help?</h5>
+                        <p class="card-text">Contact us for assistance</p>
+                        <a href="mailto:support@restaurant.com" class="btn btn-outline-secondary">Contact Support</a>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Reservations Table -->
+        <div class="card" id="reservationsSection">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <h3 class="mb-0">My Reservations</h3>
+                <div class="btn-group">
+                    <button type="button" class="btn btn-outline-secondary" onclick="filterReservations('upcoming')">Upcoming</button>
+                    <button type="button" class="btn btn-outline-secondary" onclick="filterReservations('past')">Past</button>
+                    <button type="button" class="btn btn-outline-secondary" onclick="filterReservations('all')">All</button>
+                </div>
             </div>
             <div class="card-body">
                 <div class="table-responsive">
@@ -38,11 +83,17 @@
                             <!-- Reservations will be loaded here -->
                         </tbody>
                     </table>
+                    <div id="noReservations" class="text-center py-4" style="display: none;">
+                        <p class="text-muted">No reservations found</p>
+                        <a href="/" class="btn btn-primary">Make Your First Reservation</a>
+                    </div>
                 </div>
             </div>
         </div>
     </div>
 
+    <!-- Bootstrap Bundle with Popper -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
     <script src="js/customer-dashboard.js"></script>
 </body>
 </html> 
