@@ -137,14 +137,24 @@ app.use(session({
         tableName: 'session'
     }),
     secret: process.env.SESSION_SECRET || 'your-secret-key',
-    resave: false,
-    saveUninitialized: false,
+    resave: true,
+    saveUninitialized: true,
     cookie: {
         secure: process.env.NODE_ENV === 'production',
         httpOnly: true,
         maxAge: 24 * 60 * 60 * 1000 // 24 hours
     }
 }));
+
+// Add session debugging middleware
+app.use((req, res, next) => {
+    console.log('Session Debug:', {
+        sessionID: req.sessionID,
+        hasSession: !!req.session,
+        user: req.session?.user
+    });
+    next();
+});
 
 // Add security headers middleware
 app.use((req, res, next) => {

@@ -9,6 +9,11 @@ const authRoutes = (pool) => {
         
         try {
             console.log('Login attempt for:', username);
+            console.log('Session before login:', {
+                sessionID: req.sessionID,
+                hasSession: !!req.session,
+                user: req.session?.user
+            });
             
             const result = await pool.query(
                 'SELECT * FROM users WHERE username = $1',
@@ -48,9 +53,25 @@ const authRoutes = (pool) => {
                 role: user.role,
                 email: user.email
             };
+
+            // Save session explicitly
+            await new Promise((resolve, reject) => {
+                req.session.save((err) => {
+                    if (err) {
+                        console.error('Session save error:', err);
+                        reject(err);
+                    } else {
+                        resolve();
+                    }
+                });
+            });
             
             console.log('Login successful for:', username);
-            console.log('Session data:', req.session);
+            console.log('Session after login:', {
+                sessionID: req.sessionID,
+                hasSession: !!req.session,
+                user: req.session?.user
+            });
             
             res.json({ 
                 success: true, 
@@ -142,14 +163,6 @@ const authRoutes = (pool) => {
                 // First, clear the session data
                 req.session.user = null;
                 
-                // Save the cleared session
-                await new Promise((resolve, reject) => {
-                    req.session.save((err) => {
-                        if (err) reject(err);
-                        resolve();
-                    });
-                });
-                
                 // Then destroy the session
                 await new Promise((resolve, reject) => {
                     req.session.destroy((err) => {
@@ -158,12 +171,11 @@ const authRoutes = (pool) => {
                     });
                 });
                 
-                // Clear session cookie
-                res.clearCookie('rez_coq_sid', {
+                // Clear session cookie with default name
+                res.clearCookie('connect.sid', {
                     path: '/',
                     httpOnly: true,
-                    secure: process.env.NODE_ENV === 'production',
-                    sameSite: 'strict'
+                    secure: process.env.NODE_ENV === 'production'
                 });
                 
                 res.json({ 
