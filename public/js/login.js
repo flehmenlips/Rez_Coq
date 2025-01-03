@@ -70,9 +70,10 @@ if (loginForm) {
             
             if (result.success) {
                 showMessage('Login successful, redirecting...', 'success');
-                setTimeout(() => {
-                    window.location.href = result.role === 'admin' ? '/dashboard' : '/customer-dashboard';
-                }, 500);
+                // Force redirect immediately
+                const redirectUrl = result.role === 'admin' ? '/dashboard' : '/customer-dashboard';
+                console.log('Redirecting to:', redirectUrl);
+                window.location.replace(redirectUrl);
             } else {
                 showMessage(result.message || 'Login failed', 'danger');
                 submitButton.disabled = false;
