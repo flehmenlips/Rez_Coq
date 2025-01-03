@@ -173,6 +173,9 @@ app.use((req, res, next) => {
     next();
 });
 
+// Apply auth middleware to all routes
+app.use(auth.auth);
+
 // Routes
 app.use('/api/auth', authRoutes);
 app.use('/api/reservations', reservationRoutes);

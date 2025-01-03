@@ -1,5 +1,15 @@
 // Authentication middleware
 function auth(req, res, next) {
+    console.log('\nAuth Middleware Debug:');
+    console.log('Path:', req.path);
+    console.log('Method:', req.method);
+    console.log('Session:', {
+        id: req.sessionID,
+        hasSession: !!req.session,
+        user: req.session?.user,
+        cookie: req.session?.cookie
+    });
+
     // Add cache control headers
     res.set({
         'Cache-Control': 'no-store, no-cache, must-revalidate, proxy-revalidate',
@@ -7,11 +17,15 @@ function auth(req, res, next) {
         'Expires': '0'
     });
 
-    // Skip auth check for login, register pages and auth API endpoints
+    // Skip auth check for public routes and assets
     if (req.path === '/login' || 
         req.path === '/register' || 
         req.path === '/api/auth/register' ||
-        req.path === '/api/auth/login') {
+        req.path === '/api/auth/login' ||
+        req.path.startsWith('/css/') ||
+        req.path.startsWith('/js/') ||
+        req.path.startsWith('/img/')) {
+        console.log('Skipping auth check for public route');
         return next();
     }
 
@@ -24,9 +38,10 @@ function auth(req, res, next) {
                 message: 'Authentication required'
             });
         }
-        return res.redirect('/login');
+        return res.redirect('/login?error=Session expired');
     }
 
+    console.log('Auth check passed for user:', req.session.user.username);
     // Add user info to locals for views
     res.locals.user = req.session.user;
     next();
