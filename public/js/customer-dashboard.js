@@ -1,13 +1,30 @@
 // Global state
 let currentFilter = 'upcoming';
 let userReservations = [];
+let currentReservation = null;
+
+// Bootstrap components
+let cancelModal = null;
+let modifyModal = null;
 
 // Load user info and reservations on page load
 document.addEventListener('DOMContentLoaded', async () => {
     await loadUserInfo();
     await loadReservations();
     setupEventListeners();
+    initializeComponents();
 });
+
+// Initialize Bootstrap components
+function initializeComponents() {
+    // Initialize modals
+    cancelModal = new bootstrap.Modal(document.getElementById('cancelModal'));
+    modifyModal = new bootstrap.Modal(document.getElementById('modifyModal'));
+    
+    // Initialize event listeners for modals
+    document.getElementById('confirmCancelBtn').addEventListener('click', handleCancelConfirm);
+    document.getElementById('confirmModifyBtn').addEventListener('click', handleModifyConfirm);
+}
 
 // Load user information
 async function loadUserInfo() {
@@ -27,7 +44,7 @@ async function loadUserInfo() {
         }
     } catch (error) {
         console.error('Error loading user info:', error);
-        showError('Failed to load user information');
+        showToast('Failed to load user information', 'error');
     }
 }
 
@@ -42,11 +59,11 @@ async function loadReservations() {
             updateReservationsDisplay();
             updateUpcomingCount();
         } else {
-            showError(data.message);
+            showToast(data.message, 'error');
         }
     } catch (error) {
         console.error('Error loading reservations:', error);
-        showError('Failed to load reservations');
+        showToast('Failed to load reservations', 'error');
     }
 }
 
@@ -188,4 +205,131 @@ function getActionButtons(reservation, isPast) {
 function showError(message) {
     // TODO: Implement error toast or alert
     console.error(message);
+}
+
+// Reservation Actions
+async function cancelReservation(id) {
+    const reservation = userReservations.find(r => r.id === id);
+    if (!reservation) return;
+    
+    currentReservation = reservation;
+    document.getElementById('cancelDetails').textContent = 
+        `Date: ${formatDate(reservation.date)} at ${formatTime(reservation.time)} for ${reservation.guests} guests`;
+    cancelModal.show();
+}
+
+async function handleCancelConfirm() {
+    if (!currentReservation) return;
+    
+    const btn = document.getElementById('confirmCancelBtn');
+    btn.classList.add('btn-loading');
+    btn.disabled = true;
+    
+    try {
+        const response = await fetch(`/api/reservations/${currentReservation.id}/cancel`, {
+            method: 'POST'
+        });
+        
+        const data = await response.json();
+        if (data.success) {
+            showToast('Reservation cancelled successfully', 'success');
+            await loadReservations();
+            cancelModal.hide();
+        } else {
+            showToast(data.message || 'Failed to cancel reservation', 'error');
+        }
+    } catch (error) {
+        console.error('Error canceling reservation:', error);
+        showToast('Failed to cancel reservation', 'error');
+    } finally {
+        btn.classList.remove('btn-loading');
+        btn.disabled = false;
+    }
+}
+
+async function modifyReservation(id) {
+    const reservation = userReservations.find(r => r.id === id);
+    if (!reservation) return;
+    
+    currentReservation = reservation;
+    document.getElementById('modifyDate').value = reservation.date;
+    document.getElementById('modifyTime').value = reservation.time;
+    document.getElementById('modifyGuests').value = reservation.guests;
+    modifyModal.show();
+}
+
+async function handleModifyConfirm() {
+    if (!currentReservation) return;
+    
+    const btn = document.getElementById('confirmModifyBtn');
+    btn.classList.add('btn-loading');
+    btn.disabled = true;
+    
+    const formData = {
+        date: document.getElementById('modifyDate').value,
+        time: document.getElementById('modifyTime').value,
+        guests: document.getElementById('modifyGuests').value
+    };
+    
+    try {
+        const response = await fetch(`/api/reservations/${currentReservation.id}`, {
+            method: 'PUT',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(formData)
+        });
+        
+        const data = await response.json();
+        if (data.success) {
+            showToast('Reservation modified successfully', 'success');
+            await loadReservations();
+            modifyModal.hide();
+        } else {
+            showToast(data.message || 'Failed to modify reservation', 'error');
+        }
+    } catch (error) {
+        console.error('Error modifying reservation:', error);
+        showToast('Failed to modify reservation', 'error');
+    } finally {
+        btn.classList.remove('btn-loading');
+        btn.disabled = false;
+    }
+}
+
+async function bookAgain(id) {
+    const reservation = userReservations.find(r => r.id === id);
+    if (!reservation) return;
+    
+    // Redirect to booking page with pre-filled values
+    const params = new URLSearchParams({
+        guests: reservation.guests,
+        date: reservation.date,
+        time: reservation.time
+    });
+    window.location.href = `/?${params.toString()}`;
+}
+
+// Toast notifications
+function showToast(message, type = 'info') {
+    const toastContainer = document.querySelector('.toast-container');
+    const toast = document.createElement('div');
+    toast.className = `toast align-items-center border-0 bg-${type === 'error' ? 'danger' : type}`;
+    toast.setAttribute('role', 'alert');
+    toast.innerHTML = `
+        <div class="d-flex">
+            <div class="toast-body text-white">
+                ${message}
+            </div>
+            <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"></button>
+        </div>
+    `;
+    toastContainer.appendChild(toast);
+    
+    const bsToast = new bootstrap.Toast(toast, { delay: 3000 });
+    bsToast.show();
+    
+    toast.addEventListener('hidden.bs.toast', () => {
+        toast.remove();
+    });
 } 
