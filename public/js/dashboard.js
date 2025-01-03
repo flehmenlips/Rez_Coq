@@ -189,7 +189,7 @@ async function loadSettings() {
         }
         const settings = await response.json();
         
-        // Update to use correct element IDs matching the HTML
+        // Update form fields with settings values
         document.getElementById('opening_time').value = settings.opening_time || '';
         document.getElementById('closing_time').value = settings.closing_time || '';
         document.getElementById('max_party_size').value = settings.max_party_size || '';
@@ -239,12 +239,24 @@ async function saveSettings(event) {
                 'Content-Type': 'application/json',
                 'Accept': 'application/json'
             },
-            body: JSON.stringify(settings)
+            body: JSON.stringify({
+                opening_time: settings.opening_time,
+                closing_time: settings.closing_time,
+                daily_max_guests: settings.daily_max_guests,
+                max_party_size: settings.max_party_size,
+                availability_window: settings.availability_window,
+                window_update_time: settings.window_update_time
+            })
         });
         
         if (!response.ok) {
-            const errorData = await response.json().catch(() => ({}));
+            const errorData = await response.json();
             throw new Error(errorData.message || 'Failed to save settings');
+        }
+        
+        const result = await response.json();
+        if (!result.success) {
+            throw new Error(result.message || 'Failed to save settings');
         }
         
         showAlert('Settings saved successfully', 'success');

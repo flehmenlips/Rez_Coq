@@ -233,6 +233,30 @@ const authRoutes = (pool) => {
             });
         }
     });
+
+    // Get current user info
+    router.get('/user', async (req, res) => {
+        try {
+            if (!req.session?.user) {
+                return res.status(401).json({
+                    success: false,
+                    message: 'Not authenticated'
+                });
+            }
+            
+            const { id, username, role, email } = req.session.user;
+            res.json({
+                success: true,
+                user: { id, username, role, email }
+            });
+        } catch (error) {
+            console.error('Error fetching user info:', error);
+            res.status(500).json({
+                success: false,
+                message: 'Error fetching user information'
+            });
+        }
+    });
     
     return router;
 };
