@@ -45,24 +45,27 @@ app.use(session({
     }
 }));
 
-// Static files
-app.use(express.static(path.join(__dirname, 'public')));
-
 // Routes that don't require authentication
 app.get('/', (req, res) => {
+    if (!req.session?.user) {
+        return res.redirect('/login');
+    }
+    if (req.session.user.role === 'admin') {
+        return res.redirect('/dashboard');
+    }
     res.sendFile(path.join(__dirname, 'public', 'index.html'));
 });
 
 app.get('/login', (req, res) => {
     if (req.session?.user) {
-        return res.redirect('/dashboard');
+        return res.redirect(req.session.user.role === 'admin' ? '/dashboard' : '/');
     }
     res.sendFile(path.join(__dirname, 'public', 'login.html'));
 });
 
 app.get('/register', (req, res) => {
     if (req.session?.user) {
-        return res.redirect('/dashboard');
+        return res.redirect(req.session.user.role === 'admin' ? '/dashboard' : '/');
     }
     res.sendFile(path.join(__dirname, 'public', 'register.html'));
 });
@@ -70,13 +73,18 @@ app.get('/register', (req, res) => {
 // Auth routes (don't require authentication)
 app.use('/api/auth', authRoutes);
 
+// Static files that don't require auth
+app.use(express.static(path.join(__dirname, 'public', 'css')));
+app.use(express.static(path.join(__dirname, 'public', 'js')));
+app.use(express.static(path.join(__dirname, 'public', 'img')));
+
 // Apply auth middleware to protected routes
 app.use(auth);
 
 // Protected routes
 app.get('/dashboard', (req, res) => {
     if (req.session?.user?.role !== 'admin') {
-        return res.status(403).send('Access denied');
+        return res.redirect('/');
     }
     res.sendFile(path.join(__dirname, 'public', 'dashboard.html'));
 });
@@ -85,10 +93,18 @@ app.get('/user-settings', (req, res) => {
     res.sendFile(path.join(__dirname, 'public', 'user-settings.html'));
 });
 
+// Protected static files
+app.use('/protected', express.static(path.join(__dirname, 'public', 'protected')));
+
 // API routes (all require authentication)
 app.use('/api/settings', settingsRoutes);
 app.use('/api/reservations', reservationRoutes);
 app.use('/api/admin', adminRoutes);
+
+// Catch-all route for undefined paths
+app.get('*', (req, res) => {
+    res.redirect(req.session?.user ? '/' : '/login');
+});
 
 // Error handling middleware
 app.use((err, req, res, next) => {
