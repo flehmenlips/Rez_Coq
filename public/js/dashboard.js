@@ -147,17 +147,123 @@ function populateReservationsTable(reservations) {
 
 async function editReservation(id) {
     try {
-        const response = await fetch(`/api/reservations/${id}`);
+        const response = await fetch(`/api/admin/reservations/${id}`);
         if (!response.ok) {
             throw new Error(`HTTP error! status: ${response.status}`);
         }
         
         const reservation = await response.json();
-        // Placeholder for now
-        showAlert('Edit functionality coming soon!', 'info');
+        
+        // Create modal if it doesn't exist
+        let modal = document.getElementById('editReservationModal');
+        if (!modal) {
+            const modalHtml = `
+                <div class="modal fade" id="editReservationModal" tabindex="-1" aria-hidden="true">
+                    <div class="modal-dialog">
+                        <div class="modal-content">
+                            <div class="modal-header">
+                                <h5 class="modal-title">Edit Reservation</h5>
+                                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                            </div>
+                            <div class="modal-body">
+                                <form id="editReservationForm">
+                                    <input type="hidden" id="reservationId">
+                                    <div class="mb-3">
+                                        <label for="editDate" class="form-label">Date</label>
+                                        <input type="date" class="form-control" id="editDate" required>
+                                    </div>
+                                    <div class="mb-3">
+                                        <label for="editTime" class="form-label">Time</label>
+                                        <input type="time" class="form-control" id="editTime" required>
+                                    </div>
+                                    <div class="mb-3">
+                                        <label for="editName" class="form-label">Name</label>
+                                        <input type="text" class="form-control" id="editName" required>
+                                    </div>
+                                    <div class="mb-3">
+                                        <label for="editEmail" class="form-label">Email</label>
+                                        <input type="email" class="form-control" id="editEmail" required>
+                                    </div>
+                                    <div class="mb-3">
+                                        <label for="editGuests" class="form-label">Number of Guests</label>
+                                        <input type="number" class="form-control" id="editGuests" min="1" required>
+                                    </div>
+                                    <div class="mb-3">
+                                        <label for="editStatus" class="form-label">Status</label>
+                                        <select class="form-control" id="editStatus" required>
+                                            <option value="pending">Pending</option>
+                                            <option value="confirmed">Confirmed</option>
+                                            <option value="cancelled">Cancelled</option>
+                                            <option value="completed">Completed</option>
+                                        </select>
+                                    </div>
+                                </form>
+                            </div>
+                            <div class="modal-footer">
+                                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                                <button type="button" class="btn btn-primary" onclick="saveReservationChanges()">Save Changes</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `;
+            document.body.insertAdjacentHTML('beforeend', modalHtml);
+            modal = document.getElementById('editReservationModal');
+        }
+        
+        // Populate form with reservation data
+        document.getElementById('reservationId').value = reservation.id;
+        document.getElementById('editDate').value = reservation.date;
+        document.getElementById('editTime').value = reservation.time;
+        document.getElementById('editName').value = reservation.name;
+        document.getElementById('editEmail').value = reservation.email;
+        document.getElementById('editGuests').value = reservation.guests;
+        document.getElementById('editStatus').value = reservation.status || 'pending';
+        
+        // Show modal
+        const bsModal = new bootstrap.Modal(modal);
+        bsModal.show();
     } catch (error) {
         console.error('Error loading reservation:', error);
         showAlert('Error loading reservation details. Please try again.', 'danger');
+    }
+}
+
+async function saveReservationChanges() {
+    const id = document.getElementById('reservationId').value;
+    const updatedReservation = {
+        date: document.getElementById('editDate').value,
+        time: document.getElementById('editTime').value,
+        name: document.getElementById('editName').value,
+        email: document.getElementById('editEmail').value,
+        guests: document.getElementById('editGuests').value,
+        status: document.getElementById('editStatus').value
+    };
+    
+    try {
+        const response = await fetch(`/api/admin/reservations/${id}`, {
+            method: 'PUT',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(updatedReservation)
+        });
+        
+        if (!response.ok) {
+            const errorData = await response.json();
+            throw new Error(errorData.message || 'Failed to update reservation');
+        }
+        
+        // Close modal
+        const modal = bootstrap.Modal.getInstance(document.getElementById('editReservationModal'));
+        modal.hide();
+        
+        // Reload reservations
+        await loadReservations();
+        showAlert('Reservation updated successfully', 'success');
+    } catch (error) {
+        console.error('Error updating reservation:', error);
+        showAlert(error.message || 'Error updating reservation. Please try again.', 'danger');
     }
 }
 
@@ -165,19 +271,23 @@ async function deleteReservation(id) {
     if (!confirm('Are you sure you want to delete this reservation?')) return;
 
     try {
-        const response = await fetch(`/api/reservations/${id}`, {
-            method: 'DELETE'
+        const response = await fetch(`/api/admin/reservations/${id}`, {
+            method: 'DELETE',
+            headers: {
+                'Content-Type': 'application/json'
+            }
         });
         
         if (!response.ok) {
-            throw new Error(`HTTP error! status: ${response.status}`);
+            const errorData = await response.json();
+            throw new Error(errorData.message || 'Failed to delete reservation');
         }
         
         await loadReservations(); // Reload the table
         showAlert('Reservation deleted successfully', 'success');
     } catch (error) {
         console.error('Error deleting reservation:', error);
-        showAlert('Error deleting reservation. Please try again.', 'danger');
+        showAlert(error.message || 'Error deleting reservation. Please try again.', 'danger');
     }
 }
 
