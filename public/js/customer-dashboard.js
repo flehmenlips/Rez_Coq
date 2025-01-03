@@ -54,11 +54,26 @@ async function loadReservations() {
         const response = await fetch('/api/reservations/my-reservations');
         const data = await response.json();
         
+        console.log('Received reservations data:', data);
+        
         if (Array.isArray(data)) {
             userReservations = data;
+            console.log('Parsed reservations:', userReservations);
+            
+            // Log a sample reservation if available
+            if (userReservations.length > 0) {
+                console.log('Sample reservation format:', {
+                    date: userReservations[0].date,
+                    parsedDate: new Date(userReservations[0].date.split('T')[0]),
+                    time: userReservations[0].time,
+                    combined: `${userReservations[0].date.split('T')[0]} ${userReservations[0].time}`
+                });
+            }
+            
             updateReservationsDisplay();
             updateUpcomingCount();
         } else {
+            console.error('Unexpected data format:', data);
             showToast(data.message || 'Failed to load reservations', 'error');
         }
     } catch (error) {
@@ -78,16 +93,24 @@ function updateReservationsDisplay() {
     
     // Apply filter
     if (currentFilter === 'upcoming') {
-        filteredReservations = userReservations.filter(r => new Date(`${r.date} ${r.time}`) >= now);
+        filteredReservations = userReservations.filter(r => {
+            // Ensure proper date string format
+            const dateStr = `${r.date.split('T')[0]} ${r.time}`;
+            return new Date(dateStr) >= now;
+        });
     } else if (currentFilter === 'past') {
-        filteredReservations = userReservations.filter(r => new Date(`${r.date} ${r.time}`) < now);
+        filteredReservations = userReservations.filter(r => {
+            // Ensure proper date string format
+            const dateStr = `${r.date.split('T')[0]} ${r.time}`;
+            return new Date(dateStr) < now;
+        });
     }
     
     // Sort by date and time
     filteredReservations.sort((a, b) => {
-        const dateA = new Date(`${a.date} ${a.time}`);
-        const dateB = new Date(`${b.date} ${b.time}`);
-        return dateA - dateB;
+        const dateStrA = `${a.date.split('T')[0]} ${a.time}`;
+        const dateStrB = `${b.date.split('T')[0]} ${b.time}`;
+        return new Date(dateStrA) - new Date(dateStrB);
     });
     
     if (filteredReservations.length === 0) {
@@ -99,7 +122,8 @@ function updateReservationsDisplay() {
         
         filteredReservations.forEach(reservation => {
             const row = document.createElement('tr');
-            const reservationDate = new Date(`${reservation.date} ${reservation.time}`);
+            const dateStr = `${reservation.date.split('T')[0]} ${reservation.time}`;
+            const reservationDate = new Date(dateStr);
             const isPast = reservationDate < now;
             
             row.innerHTML = `
@@ -170,13 +194,25 @@ function setupEventListeners() {
 
 // Helper functions
 function formatDate(dateStr) {
-    return new Date(dateStr).toLocaleDateString();
+    // Handle both ISO date strings and regular date strings
+    const date = new Date(dateStr.split('T')[0]);
+    return date.toLocaleDateString('en-US', {
+        weekday: 'short',
+        year: 'numeric',
+        month: 'short',
+        day: 'numeric'
+    });
 }
 
 function formatTime(timeStr) {
-    return new Date(`2000-01-01 ${timeStr}`).toLocaleTimeString([], { 
+    // Ensure proper time string format
+    const [hours, minutes] = timeStr.split(':');
+    const date = new Date();
+    date.setHours(parseInt(hours), parseInt(minutes), 0);
+    return date.toLocaleTimeString('en-US', { 
         hour: 'numeric', 
-        minute: '2-digit' 
+        minute: '2-digit',
+        hour12: true
     });
 }
 
