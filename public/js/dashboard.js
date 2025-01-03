@@ -149,7 +149,8 @@ async function editReservation(id) {
     try {
         const response = await fetch(`/api/admin/reservations/${id}`);
         if (!response.ok) {
-            throw new Error(`HTTP error! status: ${response.status}`);
+            const errorData = await response.json();
+            throw new Error(errorData.message || `HTTP error! status: ${response.status}`);
         }
         
         const reservation = await response.json();
@@ -211,10 +212,16 @@ async function editReservation(id) {
             modal = document.getElementById('editReservationModal');
         }
         
+        // Format time to HH:mm if needed
+        let timeValue = reservation.time;
+        if (timeValue && timeValue.length > 5) {
+            timeValue = timeValue.substring(0, 5);
+        }
+        
         // Populate form with reservation data
         document.getElementById('reservationId').value = reservation.id;
         document.getElementById('editDate').value = reservation.date;
-        document.getElementById('editTime').value = reservation.time;
+        document.getElementById('editTime').value = timeValue;
         document.getElementById('editName').value = reservation.name;
         document.getElementById('editEmail').value = reservation.email;
         document.getElementById('editGuests').value = reservation.guests;
@@ -225,7 +232,7 @@ async function editReservation(id) {
         bsModal.show();
     } catch (error) {
         console.error('Error loading reservation:', error);
-        showAlert('Error loading reservation details. Please try again.', 'danger');
+        showAlert(error.message || 'Error loading reservation details. Please try again.', 'danger');
     }
 }
 
@@ -236,7 +243,7 @@ async function saveReservationChanges() {
         time: document.getElementById('editTime').value,
         name: document.getElementById('editName').value,
         email: document.getElementById('editEmail').value,
-        guests: document.getElementById('editGuests').value,
+        guests: parseInt(document.getElementById('editGuests').value),
         status: document.getElementById('editStatus').value
     };
     
@@ -252,6 +259,11 @@ async function saveReservationChanges() {
         if (!response.ok) {
             const errorData = await response.json();
             throw new Error(errorData.message || 'Failed to update reservation');
+        }
+        
+        const result = await response.json();
+        if (!result.success) {
+            throw new Error(result.message || 'Failed to update reservation');
         }
         
         // Close modal
