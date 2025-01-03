@@ -46,7 +46,15 @@ app.use(session({
 }));
 
 // Serve static files that don't require auth
-app.use(express.static(path.join(__dirname, 'public')));
+app.use(express.static(path.join(__dirname, 'public'), {
+    setHeaders: (res, path) => {
+        if (path.endsWith('.js')) {
+            res.setHeader('Content-Type', 'application/javascript');
+        } else if (path.endsWith('.css')) {
+            res.setHeader('Content-Type', 'text/css');
+        }
+    }
+}));
 
 // Auth routes (don't require authentication)
 app.use('/api/auth', authRoutes);
