@@ -21,18 +21,28 @@ document.addEventListener('DOMContentLoaded', function() {
     // Event listeners
     document.getElementById('settingsForm').addEventListener('submit', saveSettings);
     document.getElementById('logoutBtn').addEventListener('click', handleLogout);
-    document.getElementById('addUserBtn')?.addEventListener('click', showAddUserModal);
+    
+    // Only add event listener if button exists
+    const addUserBtn = document.getElementById('addUserBtn');
+    if (addUserBtn) {
+        addUserBtn.addEventListener('click', () => {
+            // Placeholder for now
+            showAlert('User management coming soon!', 'info');
+        });
+    }
 });
 
 async function loadUserInfo() {
     try {
         const response = await fetch('/api/auth/user');
-        if (response.ok) {
-            currentUser = await response.json();
-            updateUserDisplay(currentUser);
+        if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
         }
+        currentUser = await response.json();
+        updateUserDisplay(currentUser);
     } catch (error) {
         console.error('Error loading user info:', error);
+        showAlert('Error loading user information', 'warning');
     }
 }
 
@@ -40,7 +50,7 @@ function updateUserDisplay(user) {
     if (user) {
         document.getElementById('userName').textContent = user.name || 'Admin User';
         document.getElementById('userRole').textContent = user.role || 'Restaurant Staff';
-        document.getElementById('userInitials').textContent = getInitials(user.name);
+        document.getElementById('userInitials').textContent = getInitials(user.name || 'Admin User');
     }
 }
 
@@ -54,24 +64,36 @@ function getInitials(name) {
 }
 
 async function loadDashboardData() {
-    await Promise.all([
-        loadReservations(),
-        loadSettings(),
-        loadUsers()
-    ]);
+    try {
+        await Promise.all([
+            loadReservations(),
+            loadSettings(),
+            loadUsers()
+        ]);
+    } catch (error) {
+        console.error('Error loading dashboard data:', error);
+    }
 }
 
 async function loadReservations() {
     try {
         const response = await fetch('/api/reservations');
-        if (!response.ok) throw new Error('Failed to load reservations');
+        if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+        }
         
         const reservations = await response.json();
+        if (!Array.isArray(reservations)) {
+            throw new Error('Invalid reservations data received');
+        }
+        
         updateDashboardStats(reservations);
         populateReservationsTable(reservations);
     } catch (error) {
         console.error('Error loading reservations:', error);
         showAlert('Error loading reservations. Please try again.', 'danger');
+        // Show empty state in table
+        populateReservationsTable([]);
     }
 }
 
@@ -80,24 +102,36 @@ function updateDashboardStats(reservations) {
     const todayReservations = reservations.filter(r => r.date === today);
     
     document.getElementById('todayCount').textContent = todayReservations.length;
-    document.getElementById('todayGuests').textContent = todayReservations.reduce((sum, r) => sum + r.guests, 0);
+    document.getElementById('todayGuests').textContent = todayReservations.reduce((sum, r) => sum + (parseInt(r.guests) || 0), 0);
     document.getElementById('weeklyTotal').textContent = reservations.length;
-    document.getElementById('pendingEmails').textContent = reservations.filter(r => !r.email_sent).length;
+    document.getElementById('pendingEmails').textContent = reservations.filter(r => r.status === 'pending').length;
 }
 
 function populateReservationsTable(reservations) {
     const tbody = document.getElementById('reservationsTableBody');
     tbody.innerHTML = '';
 
+    if (!reservations.length) {
+        tbody.innerHTML = `
+            <tr>
+                <td colspan="7" class="text-center text-muted py-4">
+                    <i class="bi bi-calendar-x mb-2" style="font-size: 2rem;"></i>
+                    <p class="mb-0">No reservations found</p>
+                </td>
+            </tr>
+        `;
+        return;
+    }
+
     reservations.forEach(reservation => {
         const tr = document.createElement('tr');
         tr.innerHTML = `
             <td>${formatDate(reservation.date)}</td>
             <td>${formatTime(reservation.time)}</td>
-            <td>${escapeHtml(reservation.name)}</td>
-            <td>${escapeHtml(reservation.email)}</td>
-            <td>${reservation.guests}</td>
-            <td><span class="badge bg-${getStatusBadgeClass(reservation.status)}">${reservation.status}</span></td>
+            <td>${escapeHtml(reservation.name || '')}</td>
+            <td>${escapeHtml(reservation.email || '')}</td>
+            <td>${reservation.guests || 0}</td>
+            <td><span class="badge bg-${getStatusBadgeClass(reservation.status || 'pending')}">${reservation.status || 'pending'}</span></td>
             <td>
                 <button class="btn btn-sm btn-outline-primary me-1" onclick="editReservation(${reservation.id})">
                     <i class="bi bi-pencil"></i>
@@ -114,10 +148,13 @@ function populateReservationsTable(reservations) {
 async function editReservation(id) {
     try {
         const response = await fetch(`/api/reservations/${id}`);
-        if (!response.ok) throw new Error('Failed to load reservation');
+        if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+        }
         
         const reservation = await response.json();
-        showEditReservationModal(reservation);
+        // Placeholder for now
+        showAlert('Edit functionality coming soon!', 'info');
     } catch (error) {
         console.error('Error loading reservation:', error);
         showAlert('Error loading reservation details. Please try again.', 'danger');
@@ -132,7 +169,9 @@ async function deleteReservation(id) {
             method: 'DELETE'
         });
         
-        if (!response.ok) throw new Error('Failed to delete reservation');
+        if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+        }
         
         await loadReservations(); // Reload the table
         showAlert('Reservation deleted successfully', 'success');
@@ -145,7 +184,9 @@ async function deleteReservation(id) {
 async function loadSettings() {
     try {
         const response = await fetch('/api/settings');
-        if (!response.ok) throw new Error('Failed to load settings');
+        if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+        }
         
         const settings = await response.json();
         populateSettingsForm(settings);
@@ -156,10 +197,13 @@ async function loadSettings() {
 }
 
 function populateSettingsForm(settings) {
-    document.getElementById('daily_max_guests').value = settings.daily_max_guests || '';
-    document.getElementById('max_party_size').value = settings.max_party_size || '';
-    document.getElementById('opening_time').value = settings.opening_time || '';
-    document.getElementById('closing_time').value = settings.closing_time || '';
+    const fields = ['daily_max_guests', 'max_party_size', 'opening_time', 'closing_time'];
+    fields.forEach(field => {
+        const element = document.getElementById(field);
+        if (element && settings[field] !== undefined) {
+            element.value = settings[field];
+        }
+    });
 }
 
 async function saveSettings(event) {
@@ -177,7 +221,9 @@ async function saveSettings(event) {
             body: JSON.stringify(settings)
         });
 
-        if (!response.ok) throw new Error('Failed to save settings');
+        if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+        }
         
         showAlert('Settings saved successfully', 'success');
     } catch (error) {
@@ -187,16 +233,28 @@ async function saveSettings(event) {
 }
 
 async function loadUsers() {
-    if (!document.getElementById('userList')) return;
+    const userList = document.getElementById('userList');
+    if (!userList) return;
     
     try {
         const response = await fetch('/api/users');
-        if (!response.ok) throw new Error('Failed to load users');
+        if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+        }
         
         const users = await response.json();
+        if (!Array.isArray(users)) {
+            throw new Error('Invalid users data received');
+        }
+        
         populateUserList(users);
     } catch (error) {
         console.error('Error loading users:', error);
+        userList.innerHTML = `
+            <div class="alert alert-warning">
+                Error loading users. Please try again later.
+            </div>
+        `;
     }
 }
 
@@ -204,19 +262,29 @@ function populateUserList(users) {
     const userList = document.getElementById('userList');
     userList.innerHTML = '';
 
+    if (!users.length) {
+        userList.innerHTML = `
+            <div class="text-center text-muted py-4">
+                <i class="bi bi-people mb-2" style="font-size: 2rem;"></i>
+                <p class="mb-0">No users found</p>
+            </div>
+        `;
+        return;
+    }
+
     users.forEach(user => {
         const div = document.createElement('div');
         div.className = 'list-group-item d-flex justify-content-between align-items-center';
         div.innerHTML = `
             <div>
-                <h6 class="mb-0">${escapeHtml(user.name)}</h6>
-                <small class="text-muted">${user.role}</small>
+                <h6 class="mb-0">${escapeHtml(user.name || '')}</h6>
+                <small class="text-muted">${user.role || 'User'}</small>
             </div>
             <div>
-                <button class="btn btn-sm btn-outline-primary me-1" onclick="editUser(${user.id})">
+                <button class="btn btn-sm btn-outline-primary me-1" onclick="showAlert('Edit user functionality coming soon!', 'info')">
                     <i class="bi bi-pencil"></i>
                 </button>
-                <button class="btn btn-sm btn-outline-danger" onclick="deleteUser(${user.id})">
+                <button class="btn btn-sm btn-outline-danger" onclick="showAlert('Delete user functionality coming soon!', 'info')">
                     <i class="bi bi-trash"></i>
                 </button>
             </div>
@@ -227,9 +295,14 @@ function populateUserList(users) {
 
 async function handleLogout() {
     try {
-        const response = await fetch('/api/auth/logout', { method: 'POST' });
+        const response = await fetch('/api/auth/logout', { 
+            method: 'POST',
+            credentials: 'same-origin'
+        });
         if (response.ok) {
             window.location.href = '/login.html';
+        } else {
+            throw new Error(`HTTP error! status: ${response.status}`);
         }
     } catch (error) {
         console.error('Error during logout:', error);
@@ -239,11 +312,19 @@ async function handleLogout() {
 
 // Utility functions
 function formatDate(dateStr) {
-    return new Date(dateStr).toLocaleDateString();
+    try {
+        return new Date(dateStr).toLocaleDateString();
+    } catch (e) {
+        return dateStr || '';
+    }
 }
 
 function formatTime(timeStr) {
-    return new Date(`2000-01-01T${timeStr}`).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    try {
+        return new Date(`2000-01-01T${timeStr}`).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    } catch (e) {
+        return timeStr || '';
+    }
 }
 
 function getStatusBadgeClass(status) {
@@ -257,7 +338,9 @@ function getStatusBadgeClass(status) {
 }
 
 function escapeHtml(unsafe) {
+    if (!unsafe) return '';
     return unsafe
+        .toString()
         .replace(/&/g, "&amp;")
         .replace(/</g, "&lt;")
         .replace(/>/g, "&gt;")
@@ -269,6 +352,7 @@ function showAlert(message, type = 'info') {
     // Create alert element
     const alert = document.createElement('div');
     alert.className = `alert alert-${type} alert-dismissible fade show position-fixed top-0 end-0 m-3`;
+    alert.style.zIndex = '9999';
     alert.role = 'alert';
     alert.innerHTML = `
         ${message}
