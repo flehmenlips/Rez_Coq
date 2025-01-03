@@ -641,12 +641,19 @@ try {
             }
         });
 
-        // Import database initialization
+        // Import database modules
+        const { pool, testConnection } = require('./utils/db');
         const { initializeDatabase } = require('./utils/db-queries');
 
         // Initialize database before starting the server
         async function startServer() {
             try {
+                // Test database connection
+                const isConnected = await testConnection();
+                if (!isConnected) {
+                    throw new Error('Could not connect to database');
+                }
+
                 // Initialize database
                 await initializeDatabase();
                 
@@ -664,11 +671,15 @@ try {
                 });
 
                 // Cleanup on exit
-                process.on('SIGINT', () => {
-                    if (db) {
-                        db.close();
+                process.on('SIGINT', async () => {
+                    try {
+                        await pool.end();
+                        log.info('Database pool has ended');
+                        process.exit(0);
+                    } catch (err) {
+                        log.error('Error during cleanup:', err);
+                        process.exit(1);
                     }
-                    process.exit(0);
                 });
 
             } catch (error) {

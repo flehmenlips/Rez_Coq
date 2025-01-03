@@ -97,10 +97,19 @@ const adminRoutes = () => {
             console.log('Update request:', { id, date, time, name, email, guests, status });
 
             // Validate required fields
-            if (!date || !time || !name || !email || !guests || !status) {
+            if (!date || !time || !name || !email || !guests) {
                 return res.status(400).json({
                     success: false,
                     message: 'Missing required fields'
+                });
+            }
+
+            // Validate status
+            const validStatuses = ['pending', 'confirmed', 'cancelled', 'completed'];
+            if (status && !validStatuses.includes(status)) {
+                return res.status(400).json({
+                    success: false,
+                    message: 'Invalid status value'
                 });
             }
 
@@ -127,8 +136,8 @@ const adminRoutes = () => {
                 settings[row.key] = row.value;
             });
 
-            const maxPartySize = parseInt(settings.max_party_size);
-            const dailyMaxGuests = parseInt(settings.daily_max_guests);
+            const maxPartySize = parseInt(settings.max_party_size || 12);
+            const dailyMaxGuests = parseInt(settings.daily_max_guests || 100);
 
             // Validate party size
             if (parseInt(guests) > maxPartySize) {
@@ -161,12 +170,25 @@ const adminRoutes = () => {
             const formattedTime = time.substring(0, 5);
 
             // Update the reservation
-            const result = await client.query(
-                `UPDATE reservations 
-                 SET date = $1, time = $2, name = $3, email = $4, guests = $5, status = $6,
-                     updated_at = CURRENT_TIMESTAMP
-                 WHERE id = $7
-                 RETURNING *`,
+            const updateQuery = `
+                UPDATE reservations 
+                SET date = $1, 
+                    time = $2, 
+                    name = $3, 
+                    email = $4, 
+                    guests = $5, 
+                    status = COALESCE($6, status),
+                    updated_at = CURRENT_TIMESTAMP
+                WHERE id = $7
+                RETURNING *
+            `;
+
+            console.log('Executing update query:', {
+                query: updateQuery,
+                values: [date, formattedTime, name, email, parseInt(guests), status, id]
+            });
+
+            const result = await client.query(updateQuery, 
                 [date, formattedTime, name, email, parseInt(guests), status, id]
             );
 
@@ -177,6 +199,8 @@ const adminRoutes = () => {
             if (updatedReservation.time) {
                 updatedReservation.time = updatedReservation.time.substring(0, 5);
             }
+
+            console.log('Update successful:', updatedReservation);
 
             res.json({
                 success: true,
@@ -189,7 +213,8 @@ const adminRoutes = () => {
             res.status(500).json({
                 success: false,
                 message: 'Failed to update reservation',
-                error: error.message
+                error: error.message,
+                details: process.env.NODE_ENV === 'development' ? error.stack : undefined
             });
         } finally {
             client.release();

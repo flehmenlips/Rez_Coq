@@ -1,33 +1,33 @@
 const { Pool } = require('pg');
-require('dotenv').config();
 
-let pool;
-
-if (process.env.NODE_ENV === 'production') {
-    // Production configuration (Render.com)
-    pool = new Pool({
-        connectionString: process.env.DATABASE_URL,
-        ssl: {
-            rejectUnauthorized: false
-        }
-    });
-} else {
-    // Development configuration (local)
-    pool = new Pool({
-        connectionString: process.env.DATABASE_URL,
-        ssl: process.env.DATABASE_URL.includes('localhost') ? false : {
-            rejectUnauthorized: false
-        }
-    });
-}
-
-// Test connection
-pool.query('SELECT NOW()', (err, res) => {
-    if (err) {
-        console.error('Database connection failed:', err);
-    } else {
-        console.log('Database connected successfully');
-    }
+// Create a new pool using environment variables
+const pool = new Pool({
+    connectionString: process.env.DATABASE_URL,
+    ssl: process.env.NODE_ENV === 'production' ? {
+        rejectUnauthorized: false
+    } : false
 });
 
-module.exports = pool; 
+// Add error handler
+pool.on('error', (err) => {
+    console.error('Unexpected error on idle client', err);
+    process.exit(-1);
+});
+
+// Add connection testing
+async function testConnection() {
+    try {
+        const client = await pool.connect();
+        console.log('Database connection successful');
+        client.release();
+        return true;
+    } catch (err) {
+        console.error('Database connection error:', err);
+        return false;
+    }
+}
+
+module.exports = {
+    pool,
+    testConnection
+}; 
