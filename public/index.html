@@ -304,259 +304,100 @@
 
     <script src="script.js"></script>
     <script>
-    // Prevent form from submitting normally
-    document.getElementById('reservationForm').addEventListener('submit', async (e) => {
-        e.preventDefault();
-        
-        const form = e.target;
-        const submitButton = form.querySelector('button[type="submit"]');
-        const originalButtonText = submitButton.innerHTML;
-        
-        try {
-            // Disable form and show loading state
-            submitButton.disabled = true;
-            submitButton.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Submitting...';
-            
-            const formData = new FormData(form);
-            const data = Object.fromEntries(formData.entries());
-            
-            // Format date for display
-            const formattedDate = new Date(data.date).toLocaleDateString('en-US', {
-                weekday: 'long',
-                year: 'numeric',
-                month: 'long',
-                day: 'numeric'
-            });
-            
-            const response = await fetch('/api/reservations', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json'
-                },
-                body: JSON.stringify(data)
-            });
-            
-            const result = await response.json();
-            
-            if (!response.ok) {
-                throw new Error(result.message || 'Failed to create reservation');
-            }
-            
-            if (result.success) {
-                // Update confirmation modal content
-                document.getElementById('reservationDetails').innerHTML = `
-                    <div class="reservation-details">
-                        <p><strong>Date:</strong> ${formattedDate}</p>
-                        <p><strong>Time:</strong> ${data.time}</p>
-                        <p><strong>Number of Guests:</strong> ${data.guests}</p>
-                        <p><strong>Reserved for:</strong> ${data.name}</p>
-                        <p><strong>Confirmation Email:</strong> ${data.email}</p>
-                        <p class="text-muted mt-3">A confirmation email will be sent to your address.</p>
-                        <p class="text-muted">Reservation ID: #${result.reservation.id}</p>
-                    </div>
-                `;
-                
-                // Show confirmation modal
-                const modal = new bootstrap.Modal(document.getElementById('confirmationModal'));
-                modal.show();
-                
-                // Add event handler for when modal is hidden
-                document.getElementById('confirmationModal').addEventListener('hidden.bs.modal', function () {
-                    window.location.href = '/customer-dashboard';
-                });
-                
-                // Reset form
-                form.reset();
-            } else {
-                throw new Error(result.message || 'Failed to create reservation');
-            }
-        } catch (error) {
-            console.error('Error:', error);
-            // Show error in modal
-            document.getElementById('errorMessage').textContent = error.message;
-            const errorModal = new bootstrap.Modal(document.getElementById('errorModal'));
-            errorModal.show();
-        } finally {
-            // Restore button state
-            submitButton.disabled = false;
-            submitButton.innerHTML = originalButtonText;
-        }
-    });
-
-    // Prevent form from submitting on enter key
-    document.getElementById('reservationForm').addEventListener('keypress', function(e) {
-        if (e.key === 'Enter') {
-            e.preventDefault();
-        }
-    });
-
-    // Set up date constraints based on settings
-    async function setupDatePicker() {
-        try {
-            const response = await fetch('/api/settings');
-            const settings = await response.json();
-            
-            const dateInput = document.getElementById('date');
-            const today = new Date();
-            const maxDate = new Date();
-            maxDate.setDate(today.getDate() + parseInt(settings.reservation_window));
-            
-            // Set min date to today
-            dateInput.min = today.toISOString().split('T')[0];
-            // Set max date based on window
-            dateInput.max = maxDate.toISOString().split('T')[0];
-            
-            console.log('Date picker configured:', {
-                min: dateInput.min,
-                max: dateInput.max,
-                window: settings.reservation_window
-            });
-
-            // Update guests input max value
-            const guestsInput = document.getElementById('guests');
-            guestsInput.max = settings.max_party_size;
-            guestsInput.title = `Maximum party size is ${settings.max_party_size}`;
-        } catch (error) {
-            console.error('Error setting up date picker:', error);
-        }
-    }
-
-    async function setupGuestsValidation() {
-        try {
-            const response = await fetch('/api/settings');
-            const settings = await response.json();
-            
-            const guestsInput = document.getElementById('guests');
-            const maxPartySize = parseInt(settings.max_party_size);
-            const dailyMaxGuests = parseInt(settings.daily_max_guests);
-            
-            // Update label with max party size
-            document.getElementById('partyLimit').textContent = `(Parties of ${maxPartySize} or less)`;
-            
-            // Set input attributes
-            guestsInput.max = maxPartySize;
-            guestsInput.title = `Maximum party size is ${maxPartySize}`;
-            
-            // Add input validation
-            guestsInput.addEventListener('input', function(e) {
-                const value = parseInt(this.value);
-                if (value > maxPartySize) {
-                    // Show validation modal
-                    document.getElementById('validationMessage').textContent = 
-                        `Party size cannot exceed ${maxPartySize} guests. For larger groups, please contact us directly.`;
-                    new bootstrap.Modal(document.getElementById('validationModal')).show();
-                    
-                    // Reset to max allowed value
-                    this.value = maxPartySize;
-                }
-            });
-            
-            // Add date change listener to check daily capacity
-            document.getElementById('date').addEventListener('change', async function(e) {
-                const date = this.value;
-                if (date) {
-                    try {
-                        const response = await fetch(`/api/reservations/daily-count?date=${date}`);
-                        const data = await response.json();
-                        const currentTotal = parseInt(data.total_guests || 0);
-                        const remainingCapacity = dailyMaxGuests - currentTotal;
-                        
-                        // Update guests input max based on remaining capacity
-                        const newMax = Math.min(maxPartySize, remainingCapacity);
-                        guestsInput.max = newMax;
-                        
-                        if (remainingCapacity <= 0) {
-                            document.getElementById('validationMessage').textContent = 
-                                `We're fully booked for this date. Please select another date.`;
-                            new bootstrap.Modal(document.getElementById('validationModal')).show();
-                            this.value = ''; // Clear the date
-                        } else if (remainingCapacity < maxPartySize) {
-                            document.getElementById('validationMessage').textContent = 
-                                `Due to capacity limits, we can only accommodate parties of ${newMax} or less for this date.`;
-                            new bootstrap.Modal(document.getElementById('validationModal')).show();
-                        }
-                        
-                        // Update help text
-                        guestsInput.title = `Maximum party size for this date is ${newMax}`;
-                        document.getElementById('partyLimit').textContent = 
-                            `(Parties of ${newMax} or less for this date)`;
-                    } catch (error) {
-                        console.error('Error checking daily capacity:', error);
-                    }
-                }
-            });
-        } catch (error) {
-            console.error('Error setting up guests validation:', error);
-        }
-    }
-
     document.addEventListener('DOMContentLoaded', () => {
-        checkAuth();
-        setupDatePicker();
-        setupGuestsValidation();
-    });
-
-    // Add time slot population
-    document.getElementById('date').addEventListener('change', async (e) => {
-        const date = e.target.value;
+        const dateInput = document.getElementById('date');
         const timeSelect = document.getElementById('time');
-        timeSelect.innerHTML = '<option value="">Loading times...</option>';
-        timeSelect.disabled = true;
-        
-        try {
-            console.log('Fetching available times...');
-            const response = await fetch('/api/reservations/available-times');
-            console.log('Response status:', response.status);
-            
-            if (!response.ok) {
-                const errorText = await response.text();
-                console.error('Server response:', errorText);
-                throw new Error(`Failed to fetch available times: ${response.status} ${errorText}`);
-            }
-            
-            const times = await response.json();
-            console.log('Available times:', times);
-            
-            if (!Array.isArray(times)) {
-                throw new Error('Server returned invalid time slot format');
-            }
-            
-            timeSelect.innerHTML = '<option value="">Select a time</option>';
-            
-            if (times.length === 0) {
-                timeSelect.innerHTML = '<option value="">No times available</option>';
-                return;
-            }
-            
-            times.forEach(time => {
-                const option = document.createElement('option');
-                option.value = time;
-                option.textContent = time;
-                timeSelect.appendChild(option);
-            });
-        } catch (error) {
-            console.error('Error fetching times:', error);
-            timeSelect.innerHTML = `<option value="">Error: ${error.message}</option>`;
-        } finally {
-            timeSelect.disabled = false;
-        }
-    });
+        const guestsInput = document.getElementById('guests');
+        const emailInput = document.getElementById('email');
+        const nameInput = document.getElementById('name');
+        const form = document.getElementById('reservationForm');
+        let loadingTimes = false;
 
-    // Check auth status on page load
-    async function checkAuth() {
-        try {
-            const response = await fetch('/api/auth/check-session');
-            const result = await response.json();
-            if (!result.authenticated) {
-                window.location.href = '/login';
+        // Set min date to today and max date to 3 months from now
+        const today = new Date();
+        const maxDate = new Date();
+        maxDate.setMonth(maxDate.getMonth() + 3);
+        
+        dateInput.min = today.toISOString().split('T')[0];
+        dateInput.max = maxDate.toISOString().split('T')[0];
+
+        // Load available times when date changes
+        dateInput.addEventListener('change', async () => {
+            if (loadingTimes) return; // Prevent multiple simultaneous requests
+            
+            const selectedDate = dateInput.value;
+            if (!selectedDate) return;
+
+            timeSelect.disabled = true;
+            timeSelect.innerHTML = '<option value="">Loading available times...</option>';
+            loadingTimes = true;
+
+            try {
+                console.log('Fetching available times for:', selectedDate);
+                const response = await fetch('/api/reservations/available-times');
+                console.log('Response status:', response.status);
+                
+                const data = await response.json();
+                console.log('Available times data:', data);
+
+                if (data.success && Array.isArray(data.slots)) {
+                    timeSelect.innerHTML = data.slots.length > 0
+                        ? data.slots.map(time => `<option value="${time}">${time}</option>`).join('')
+                        : '<option value="">No times available</option>';
+                } else {
+                    throw new Error(data.message || 'Failed to load available times');
+                }
+            } catch (error) {
+                console.error('Error loading available times:', error);
+                timeSelect.innerHTML = '<option value="">Error loading times - please try again</option>';
+            } finally {
+                timeSelect.disabled = false;
+                loadingTimes = false;
             }
-        } catch (error) {
-            console.error('Auth check failed:', error);
-            window.location.href = '/login';
-        }
-    }
-    
-    document.addEventListener('DOMContentLoaded', checkAuth);
+        });
+
+        // Handle form submission
+        form.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            const submitButton = form.querySelector('button[type="submit"]');
+            submitButton.disabled = true;
+            submitButton.innerHTML = '<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Processing...';
+
+            try {
+                const response = await fetch('/api/reservations', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        date: dateInput.value,
+                        time: timeSelect.value,
+                        guests: parseInt(guestsInput.value),
+                        email: emailInput.value,
+                        name: nameInput.value
+                    })
+                });
+
+                const result = await response.json();
+                
+                if (result.success) {
+                    // Show success modal
+                    const modal = new bootstrap.Modal(document.getElementById('confirmationModal'));
+                    modal.show();
+                    form.reset();
+                } else {
+                    throw new Error(result.message || 'Failed to create reservation');
+                }
+            } catch (error) {
+                console.error('Error creating reservation:', error);
+                alert('Failed to create reservation: ' + error.message);
+            } finally {
+                submitButton.disabled = false;
+                submitButton.innerHTML = 'Complete Reservation';
+            }
+        });
+    });
     </script>
 </body>
 </html>
