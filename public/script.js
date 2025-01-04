@@ -95,6 +95,23 @@ function initializeDatePicker() {
     loadAvailableTimeSlots(dateInput.value);
 }
 
+// Add at the start of the file
+async function checkAuthentication() {
+    try {
+        const response = await fetch('/api/auth/check-session');
+        const result = await response.json();
+        if (!result.success || !result.user) {
+            window.location.href = '/login.html';
+            return false;
+        }
+        return true;
+    } catch (error) {
+        console.error('Error checking authentication:', error);
+        window.location.href = '/login.html';
+        return false;
+    }
+}
+
 // Enhanced time slot loading
 async function loadAvailableTimeSlots(selectedDate) {
     const timeSelect = document.getElementById('time');
@@ -105,15 +122,15 @@ async function loadAvailableTimeSlots(selectedDate) {
         loadingIndicator.style.display = 'block';
         
         const response = await fetch(`/api/reservations/available-times?date=${selectedDate}`);
-        const availableTimes = await response.json();
+        const data = await response.json();
         
         // Clear existing options
         timeSelect.innerHTML = '';
         
-        if (availableTimes.length === 0) {
+        if (!data.success || !data.slots || data.slots.length === 0) {
             const option = document.createElement('option');
             option.value = '';
-            option.textContent = 'No available times for this date';
+            option.textContent = data.message || 'No available times for this date';
             timeSelect.appendChild(option);
         } else {
             const defaultOption = document.createElement('option');
@@ -121,7 +138,7 @@ async function loadAvailableTimeSlots(selectedDate) {
             defaultOption.textContent = 'Select a time';
             timeSelect.appendChild(defaultOption);
             
-            availableTimes.forEach(time => {
+            data.slots.forEach(time => {
                 const option = document.createElement('option');
                 option.value = time;
                 option.textContent = time;
@@ -138,7 +155,12 @@ async function loadAvailableTimeSlots(selectedDate) {
 }
 
 // Initialize on page load
-document.addEventListener('DOMContentLoaded', function() {
+document.addEventListener('DOMContentLoaded', async function() {
+    // Check authentication first
+    if (!await checkAuthentication()) {
+        return;
+    }
+    
     initializeDatePicker();
     checkAdminAccess();
     
