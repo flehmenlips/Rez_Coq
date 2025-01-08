@@ -50,8 +50,12 @@ async function initializeTables() {
             )
         `);
 
+        // Drop existing reservations table if it exists
+        await query('DROP TABLE IF EXISTS reservations');
+
+        // Create new reservations table with all required columns
         await query(`
-            CREATE TABLE IF NOT EXISTS reservations (
+            CREATE TABLE reservations (
                 id SERIAL PRIMARY KEY,
                 name VARCHAR(255) NOT NULL,
                 email VARCHAR(255) NOT NULL,
