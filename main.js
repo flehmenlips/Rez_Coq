@@ -110,6 +110,13 @@ app.get('/dashboard', (req, res) => {
     res.sendFile(path.join(__dirname, 'public', 'dashboard.html'));
 });
 
+app.get('/customer-dashboard', (req, res) => {
+    if (!req.session?.user || req.session.user.role !== 'customer') {
+        return res.redirect('/login');
+    }
+    res.sendFile(path.join(__dirname, 'public', 'customer-dashboard.html'));
+});
+
 app.get('/user-settings', (req, res) => {
     res.sendFile(path.join(__dirname, 'public', 'user-settings.html'));
 });
