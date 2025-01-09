@@ -84,6 +84,32 @@ router.get('/', async (req, res) => {
     }
 });
 
+// Get user's reservations
+router.get('/my-reservations', async (req, res) => {
+    try {
+        if (!req.session?.user) {
+            return res.status(401).json({
+                success: false,
+                message: 'Not authenticated'
+            });
+        }
+
+        const result = await query(
+            'SELECT * FROM reservations WHERE email = $1 ORDER BY date DESC, time DESC',
+            [req.session.user.email]
+        );
+
+        res.json(result.rows);
+    } catch (error) {
+        console.error('Error fetching user reservations:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Failed to fetch reservations',
+            error: error.message
+        });
+    }
+});
+
 // Create new reservation
 router.post('/', async (req, res) => {
     try {
