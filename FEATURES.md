@@ -38,6 +38,17 @@
 - [ ] Inventory management
 - [ ] Table layout visualization
 - [ ] Custom email template editor
+- 🟨 Role-Based Access Control (RBAC)
+  - Defined roles:
+    - Owner: Full system access and configuration
+    - Manager: Staff management, reservations, analytics
+    - Server: Table management, reservations
+    - Back of House: Kitchen view, inventory
+  - Features per role:
+    - Custom dashboard views
+    - Specific action permissions
+    - Data access restrictions
+    - Audit logging of actions
 
 ## Medium Priority Features
 ### Customer Features
@@ -78,7 +89,12 @@
 
 ### Security & Performance
 - [ ] Two-factor authentication
-- [ ] Advanced role management
+- 🟨 Advanced role management
+  - Role hierarchy implementation
+  - Permission inheritance
+  - Fine-grained access control
+  - Role assignment workflow
+  - Audit trails for role changes
 - [ ] Performance optimization
 - [ ] Automated backups
 - [ ] Rate limiting implementation

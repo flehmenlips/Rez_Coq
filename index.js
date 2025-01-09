@@ -295,7 +295,7 @@ try {
                 const checkStmt = db.prepare(`
                     SELECT id FROM reservations 
                     WHERE date = ? AND time = ? AND email = ? 
-                    AND created_at > datetime('now', '-1 minute')
+                    AND created_at > datetime('now', '-5 minutes')
                 `);
                 
                 const existing = checkStmt.get(date, time, email);
@@ -626,6 +626,21 @@ try {
                 
                 // Delete the reservation
                 db.prepare('DELETE FROM reservations WHERE id = ?').run(id);
+                
+                // Send cancellation confirmation email
+                try {
+                    await sendEmail(reservation.email, 'cancellation', {
+                        id: reservation.id,
+                        date: reservation.date,
+                        time: reservation.time,
+                        guests: reservation.guests,
+                        name: reservation.name,
+                        email: reservation.email
+                    });
+                } catch (emailError) {
+                    log.error('Error sending cancellation email:', emailError);
+                    // Continue with the cancellation even if email fails
+                }
                 
                 res.json({
                     success: true,

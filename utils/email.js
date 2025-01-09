@@ -1,4 +1,5 @@
 const nodemailer = require('nodemailer');
+const log = require('./logger');
 
 // Create reusable transporter
 const transporter = nodemailer.createTransport({
@@ -8,6 +9,15 @@ const transporter = nodemailer.createTransport({
     auth: {
         user: process.env.SMTP_USER,
         pass: process.env.SMTP_APP_PASSWORD
+    }
+});
+
+// Verify transporter connection
+transporter.verify(function(error, success) {
+    if (error) {
+        log.error('SMTP connection error:', error);
+    } else {
+        log.info('SMTP server is ready to send emails');
     }
 });
 
@@ -46,24 +56,76 @@ const emailTemplates = {
             
             <p>Best regards,<br>Coq au Vin Team</p>
         `
+    }),
+    cancellation: (data) => ({
+        subject: 'Reservation Cancellation - Coq au Vin',
+        text: `
+            Your reservation at Coq au Vin has been cancelled.
+            
+            Cancelled Reservation Details:
+            Date: ${data.date}
+            Time: ${data.time}
+            Number of Guests: ${data.guests}
+            Reserved for: ${data.name}
+            
+            Reservation ID: #${data.id}
+            
+            If you would like to make a new reservation, please visit our website.
+            
+            Best regards,
+            Coq au Vin Team
+        `,
+        html: `
+            <h2>Reservation Cancellation - Coq au Vin</h2>
+            
+            <p>Your reservation at Coq au Vin has been cancelled.</p>
+            
+            <h3>Cancelled Reservation Details:</h3>
+            <p><strong>Date:</strong> ${data.date}</p>
+            <p><strong>Time:</strong> ${data.time}</p>
+            <p><strong>Number of Guests:</strong> ${data.guests}</p>
+            <p><strong>Reserved for:</strong> ${data.name}</p>
+            
+            <p><em>Reservation ID: #${data.id}</em></p>
+            
+            <p>If you would like to make a new reservation, please visit our website.</p>
+            
+            <p>Best regards,<br>Coq au Vin Team</p>
+        `
     })
 };
 
+// Send email function with improved error handling
 async function sendEmail(to, template, data) {
+    if (!emailTemplates[template]) {
+        throw new Error(`Email template '${template}' not found`);
+    }
+
+    const emailContent = emailTemplates[template](data);
+    
     try {
-        const emailContent = emailTemplates[template](data);
-        
         const info = await transporter.sendMail({
-            from: process.env.SMTP_FROM || '"Coq au Vin" <orders@seabreeze.farm>',
+            from: `"Coq au Vin" <${process.env.SMTP_USER}>`,
             to: to,
             subject: emailContent.subject,
-            text: emailContent.text,
-            html: emailContent.html
+            text: emailContent.text.trim(),
+            html: emailContent.html.trim()
         });
-
+        
+        log.info('Email sent successfully:', {
+            messageId: info.messageId,
+            template: template,
+            to: to
+        });
+        
         return info;
     } catch (error) {
-        console.error('Email sending failed:', error);
+        log.error('Failed to send email:', {
+            error: error.message,
+            template: template,
+            to: to,
+            data: data
+        });
         throw error;
     }
 }
