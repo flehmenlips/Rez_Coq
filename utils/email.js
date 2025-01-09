@@ -1,21 +1,36 @@
 const nodemailer = require('nodemailer');
 const log = require('./logger');
 
+// Log email configuration
+log.info('Email configuration:', {
+    host: process.env.SMTP_HOST,
+    port: process.env.SMTP_PORT,
+    user: process.env.SMTP_USER ? 'configured' : 'missing',
+    pass: process.env.SMTP_APP_PASSWORD ? 'configured' : 'missing'
+});
+
 // Create reusable transporter
 const transporter = nodemailer.createTransport({
     host: process.env.SMTP_HOST,
     port: process.env.SMTP_PORT,
-    secure: false,
+    secure: process.env.SMTP_PORT === '465',
     auth: {
         user: process.env.SMTP_USER,
         pass: process.env.SMTP_APP_PASSWORD
-    }
+    },
+    debug: true, // Enable debug logging
+    logger: true  // Log to console
 });
 
 // Verify transporter connection
 transporter.verify(function(error, success) {
     if (error) {
         log.error('SMTP connection error:', error);
+        log.error('SMTP configuration:', {
+            host: process.env.SMTP_HOST,
+            port: process.env.SMTP_PORT,
+            secure: process.env.SMTP_PORT === '465'
+        });
     } else {
         log.info('SMTP server is ready to send emails');
     }

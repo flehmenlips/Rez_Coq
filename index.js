@@ -112,10 +112,14 @@ try {
                         date TEXT NOT NULL,
                         time TEXT NOT NULL,
                         guests INTEGER NOT NULL,
+                        status TEXT DEFAULT 'pending' CHECK(status IN ('pending', 'confirmed', 'cancelled', 'completed')),
                         created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
                         email_status TEXT DEFAULT 'pending',
                         email_sent_at DATETIME,
-                        email_error TEXT
+                        email_error TEXT,
+                        cancelled_at DATETIME,
+                        cancelled_by INTEGER,
+                        FOREIGN KEY(cancelled_by) REFERENCES users(id)
                     )
                 `).run();
 
@@ -294,23 +298,30 @@ try {
                 // Check for existing reservation
                 const checkStmt = db.prepare(`
                     SELECT id FROM reservations 
-                    WHERE date = ? AND time = ? AND email = ? 
-                    AND created_at > datetime('now', '-5 minutes')
+                    WHERE date = ? AND time = ? 
+                    AND (email = ? OR email = (SELECT email FROM users WHERE id = ?))
+                    AND status != 'cancelled'
                 `);
                 
-                const existing = checkStmt.get(date, time, email);
+                const existing = checkStmt.get(date, time, email, req.session?.user?.id);
                 if (existing) {
-                    log.info('Duplicate reservation detected:', existing);
+                    log.info('Duplicate reservation detected:', {
+                        existingId: existing.id,
+                        date,
+                        time,
+                        email,
+                        userId: req.session?.user?.id
+                    });
                     return res.status(400).json({
                         success: false,
-                        message: 'This reservation was just submitted. Please wait a moment before trying again.'
+                        message: 'You already have a reservation for this date and time.'
                     });
                 }
                 
                 // Add the reservation
                 const insertStmt = db.prepare(`
-                    INSERT INTO reservations (date, time, guests, email, name, created_at)
-                    VALUES (?, ?, ?, ?, ?, datetime('now'))
+                    INSERT INTO reservations (date, time, guests, email, name, status, created_at)
+                    VALUES (?, ?, ?, ?, ?, 'pending', datetime('now'))
                 `);
                 
                 const result = insertStmt.run(date, time, guests, email, name);
@@ -606,26 +617,39 @@ try {
             res.sendFile(path.join(__dirname, 'public', 'customer-dashboard.html'));
         });
 
-        // Add cancel reservation endpoint
+        // Update cancel reservation endpoint
         app.post('/api/reservations/:id/cancel', auth, async (req, res) => {
             const { id } = req.params;
             
             try {
                 // Verify the reservation belongs to this user
                 const reservation = db.prepare(`
-                    SELECT * FROM reservations 
-                    WHERE id = ? AND email = (SELECT email FROM users WHERE id = ?)
-                `).get(id, req.session.user.id);
+                    SELECT r.* 
+                    FROM reservations r
+                    LEFT JOIN users u ON r.email = u.email
+                    WHERE r.id = ? AND (u.id = ? OR r.email = ?)
+                `).get(id, req.session.user.id, req.session.user.email);
                 
                 if (!reservation) {
+                    log.error('Reservation not found or unauthorized:', {
+                        reservationId: id,
+                        userId: req.session.user.id,
+                        userEmail: req.session.user.email
+                    });
                     return res.status(404).json({
                         success: false,
-                        message: 'Reservation not found'
+                        message: 'Reservation not found or you are not authorized to cancel it'
                     });
                 }
                 
-                // Delete the reservation
-                db.prepare('DELETE FROM reservations WHERE id = ?').run(id);
+                // Update the reservation status instead of deleting
+                db.prepare(`
+                    UPDATE reservations 
+                    SET status = 'cancelled',
+                        cancelled_at = datetime('now'),
+                        cancelled_by = ?
+                    WHERE id = ?
+                `).run(req.session.user.id, id);
                 
                 // Send cancellation confirmation email
                 try {
@@ -637,9 +661,16 @@ try {
                         name: reservation.name,
                         email: reservation.email
                     });
+                    log.info('Cancellation email sent:', {
+                        reservationId: id,
+                        email: reservation.email
+                    });
                 } catch (emailError) {
-                    log.error('Error sending cancellation email:', emailError);
-                    // Continue with the cancellation even if email fails
+                    log.error('Error sending cancellation email:', {
+                        error: emailError,
+                        reservationId: id,
+                        email: reservation.email
+                    });
                 }
                 
                 res.json({
@@ -648,7 +679,11 @@ try {
                 });
                 
             } catch (error) {
-                log.error('Error canceling reservation:', error);
+                log.error('Error canceling reservation:', {
+                    error,
+                    reservationId: id,
+                    userId: req.session.user.id
+                });
                 res.status(500).json({
                     success: false,
                     message: 'Failed to cancel reservation'
