@@ -164,4 +164,40 @@ router.get('/check-session', (req, res) => {
     }
 });
 
+// Get user account information
+router.get('/account', async (req, res) => {
+    try {
+        if (!req.session?.user) {
+            return res.status(401).json({
+                success: false,
+                message: 'Not authenticated'
+            });
+        }
+
+        const result = await query(
+            'SELECT id, username, email, role, created_at FROM users WHERE id = $1',
+            [req.session.user.id]
+        );
+
+        if (result.rows.length === 0) {
+            return res.status(404).json({
+                success: false,
+                message: 'User not found'
+            });
+        }
+
+        res.json({
+            success: true,
+            user: result.rows[0]
+        });
+    } catch (error) {
+        console.error('Error fetching user account:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Failed to fetch user account',
+            error: error.message
+        });
+    }
+});
+
 module.exports = router; 

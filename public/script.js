@@ -169,4 +169,66 @@ document.addEventListener('DOMContentLoaded', async function() {
     tooltips.map(function (tooltipTriggerEl) {
         return new bootstrap.Tooltip(tooltipTriggerEl);
     });
+
+    // Initialize form submission
+    const form = document.getElementById('reservationForm');
+    form.addEventListener('submit', async function(e) {
+        e.preventDefault();
+        const submitButton = document.getElementById('submitButton');
+        submitButton.disabled = true;
+        submitButton.innerHTML = '<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Processing...';
+
+        try {
+            const formData = {
+                date: document.getElementById('date').value,
+                time: document.getElementById('time').value,
+                guests: document.getElementById('guests').value,
+                name: document.getElementById('name').value,
+                email: document.getElementById('email').value
+            };
+
+            const response = await fetch('/api/reservations', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(formData)
+            });
+
+            const result = await response.json();
+
+            if (result.success) {
+                // Show confirmation modal with reservation details
+                const modal = new bootstrap.Modal(document.getElementById('confirmationModal'));
+                const modalBody = document.querySelector('#confirmationModal .modal-body');
+                modalBody.innerHTML = `
+                    <div class="alert alert-success" role="alert">
+                        <h4 class="alert-heading">Thank you for your reservation!</h4>
+                        <p>Your reservation has been confirmed for:</p>
+                        <hr>
+                        <p class="mb-0"><strong>Date:</strong> ${new Date(formData.date).toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}</p>
+                        <p class="mb-0"><strong>Time:</strong> ${formData.time}</p>
+                        <p class="mb-0"><strong>Number of Guests:</strong> ${formData.guests}</p>
+                        <p class="mb-0"><strong>Name:</strong> ${formData.name}</p>
+                        <p class="mb-0"><strong>Email:</strong> ${formData.email}</p>
+                        <hr>
+                        <p class="mb-0">A confirmation email will be sent to your email address.</p>
+                    </div>
+                `;
+                modal.show();
+
+                // Reset form
+                form.reset();
+                loadAvailableTimeSlots(document.getElementById('date').value);
+            } else {
+                throw new Error(result.message || 'Failed to create reservation');
+            }
+        } catch (error) {
+            console.error('Error creating reservation:', error);
+            alert(error.message || 'Failed to create reservation. Please try again.');
+        } finally {
+            submitButton.disabled = false;
+            submitButton.innerHTML = 'Complete Reservation';
+        }
+    });
 });
