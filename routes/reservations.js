@@ -182,4 +182,55 @@ router.post('/', async (req, res) => {
     }
 });
 
+// Update reservation
+router.put('/:id', async (req, res) => {
+    try {
+        const { id } = req.params;
+        const { date, time, guests, name, email } = req.body;
+
+        // Validate required fields
+        if (!date || !time || !guests || !name || !email) {
+            return res.status(400).json({
+                success: false,
+                message: 'Missing required fields'
+            });
+        }
+
+        // Verify the reservation belongs to the user
+        const checkResult = await query(
+            'SELECT * FROM reservations WHERE id = $1 AND email = $2',
+            [id, req.session.user.email]
+        );
+
+        if (checkResult.rows.length === 0) {
+            return res.status(404).json({
+                success: false,
+                message: 'Reservation not found or unauthorized'
+            });
+        }
+
+        // Update the reservation
+        const result = await query(
+            `UPDATE reservations 
+             SET date = $1, time = $2, guests = $3, name = $4, email = $5
+             WHERE id = $6 AND email = $7
+             RETURNING *`,
+            [date, time, guests, name, email, id, req.session.user.email]
+        );
+
+        res.json({
+            success: true,
+            message: 'Reservation updated successfully',
+            reservation: result.rows[0]
+        });
+    } catch (error) {
+        console.error('Error updating reservation:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Failed to update reservation',
+            error: error.message
+        });
+    }
+});
+
 module.exports = router;

@@ -54,27 +54,13 @@ async function loadReservations() {
         const response = await fetch('/api/reservations/my-reservations');
         const data = await response.json();
         
-        console.log('Received reservations data:', data);
-        
         if (Array.isArray(data)) {
             userReservations = data;
-            console.log('Parsed reservations:', userReservations);
-            
-            // Log a sample reservation if available
-            if (userReservations.length > 0) {
-                console.log('Sample reservation format:', {
-                    date: userReservations[0].date,
-                    parsedDate: new Date(userReservations[0].date.split('T')[0]),
-                    time: userReservations[0].time,
-                    combined: `${userReservations[0].date.split('T')[0]} ${userReservations[0].time}`
-                });
-            }
-            
             updateReservationsDisplay();
             updateUpcomingCount();
         } else {
             console.error('Unexpected data format:', data);
-            showToast(data.message || 'Failed to load reservations', 'error');
+            showToast('Failed to load reservations', 'error');
         }
     } catch (error) {
         console.error('Error loading reservations:', error);
@@ -89,28 +75,26 @@ function updateReservationsDisplay() {
     tbody.innerHTML = '';
     
     const now = new Date();
-    let filteredReservations = userReservations;
+    let filteredReservations = [...userReservations]; // Create a copy of the array
     
     // Apply filter
     if (currentFilter === 'upcoming') {
-        filteredReservations = userReservations.filter(r => {
-            // Ensure proper date string format
-            const dateStr = `${r.date.split('T')[0]} ${r.time}`;
-            return new Date(dateStr) >= now;
+        filteredReservations = filteredReservations.filter(r => {
+            const reservationDate = new Date(`${r.date.split('T')[0]} ${r.time}`);
+            return reservationDate >= now;
         });
     } else if (currentFilter === 'past') {
-        filteredReservations = userReservations.filter(r => {
-            // Ensure proper date string format
-            const dateStr = `${r.date.split('T')[0]} ${r.time}`;
-            return new Date(dateStr) < now;
+        filteredReservations = filteredReservations.filter(r => {
+            const reservationDate = new Date(`${r.date.split('T')[0]} ${r.time}`);
+            return reservationDate < now;
         });
     }
     
     // Sort by date and time
     filteredReservations.sort((a, b) => {
-        const dateStrA = `${a.date.split('T')[0]} ${a.time}`;
-        const dateStrB = `${b.date.split('T')[0]} ${b.time}`;
-        return new Date(dateStrA) - new Date(dateStrB);
+        const dateA = new Date(`${a.date.split('T')[0]} ${a.time}`);
+        const dateB = new Date(`${b.date.split('T')[0]} ${b.time}`);
+        return dateA - dateB;
     });
     
     if (filteredReservations.length === 0) {
@@ -122,8 +106,7 @@ function updateReservationsDisplay() {
         
         filteredReservations.forEach(reservation => {
             const row = document.createElement('tr');
-            const dateStr = `${reservation.date.split('T')[0]} ${reservation.time}`;
-            const reservationDate = new Date(dateStr);
+            const reservationDate = new Date(`${reservation.date.split('T')[0]} ${reservation.time}`);
             const isPast = reservationDate < now;
             
             row.innerHTML = `
@@ -304,7 +287,9 @@ async function handleModifyConfirm() {
     const formData = {
         date: document.getElementById('modifyDate').value,
         time: document.getElementById('modifyTime').value,
-        guests: document.getElementById('modifyGuests').value
+        guests: parseInt(document.getElementById('modifyGuests').value),
+        name: currentReservation.name,
+        email: currentReservation.email
     };
     
     try {
@@ -316,17 +301,21 @@ async function handleModifyConfirm() {
             body: JSON.stringify(formData)
         });
         
+        if (!response.ok) {
+            throw new Error('Failed to modify reservation');
+        }
+        
         const data = await response.json();
         if (data.success) {
             showToast('Reservation modified successfully', 'success');
             await loadReservations();
             modifyModal.hide();
         } else {
-            showToast(data.message || 'Failed to modify reservation', 'error');
+            throw new Error(data.message || 'Failed to modify reservation');
         }
     } catch (error) {
         console.error('Error modifying reservation:', error);
-        showToast('Failed to modify reservation', 'error');
+        showToast(error.message || 'Failed to modify reservation', 'error');
     } finally {
         btn.classList.remove('btn-loading');
         btn.disabled = false;

@@ -215,17 +215,23 @@ document.addEventListener('DOMContentLoaded', async function() {
                         <p class="mb-0">A confirmation email will be sent to your email address.</p>
                     </div>
                 `;
+                
+                // Add event listener for when modal is hidden
+                const confirmationModal = document.getElementById('confirmationModal');
+                confirmationModal.addEventListener('hidden.bs.modal', function () {
+                    window.location.href = '/customer-dashboard';
+                }, { once: true });
+                
                 modal.show();
-
-                // Reset form
                 form.reset();
-                loadAvailableTimeSlots(document.getElementById('date').value);
             } else {
                 throw new Error(result.message || 'Failed to create reservation');
             }
         } catch (error) {
             console.error('Error creating reservation:', error);
-            alert(error.message || 'Failed to create reservation. Please try again.');
+            const errorModal = new bootstrap.Modal(document.getElementById('errorModal'));
+            document.getElementById('errorMessage').textContent = error.message || 'Failed to create reservation. Please try again.';
+            errorModal.show();
         } finally {
             submitButton.disabled = false;
             submitButton.innerHTML = 'Complete Reservation';
