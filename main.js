@@ -82,19 +82,28 @@ app.get('/', (req, res) => {
     if (req.session.user.role === 'admin') {
         return res.redirect('/dashboard');
     }
+    if (req.session.user.role === 'customer') {
+        return res.redirect('/customer-dashboard');
+    }
     res.sendFile(path.join(__dirname, 'public', 'index.html'));
 });
 
 app.get('/login', (req, res) => {
     if (req.session?.user) {
-        return res.redirect(req.session.user.role === 'admin' ? '/dashboard' : '/');
+        if (req.session.user.role === 'admin') {
+            return res.redirect('/dashboard');
+        }
+        return res.redirect('/customer-dashboard');
     }
     res.sendFile(path.join(__dirname, 'public', 'login.html'));
 });
 
 app.get('/register', (req, res) => {
     if (req.session?.user) {
-        return res.redirect(req.session.user.role === 'admin' ? '/dashboard' : '/');
+        if (req.session.user.role === 'admin') {
+            return res.redirect('/dashboard');
+        }
+        return res.redirect('/customer-dashboard');
     }
     res.sendFile(path.join(__dirname, 'public', 'register.html'));
 });
@@ -105,19 +114,25 @@ app.use(auth);
 // Protected routes
 app.get('/dashboard', (req, res) => {
     if (req.session?.user?.role !== 'admin') {
-        return res.redirect('/');
+        return res.redirect('/customer-dashboard');
     }
     res.sendFile(path.join(__dirname, 'public', 'dashboard.html'));
 });
 
 app.get('/customer-dashboard', (req, res) => {
-    if (!req.session?.user || req.session.user.role !== 'customer') {
+    if (!req.session?.user) {
         return res.redirect('/login');
+    }
+    if (req.session.user.role === 'admin') {
+        return res.redirect('/dashboard');
     }
     res.sendFile(path.join(__dirname, 'public', 'customer-dashboard.html'));
 });
 
 app.get('/user-settings', (req, res) => {
+    if (!req.session?.user) {
+        return res.redirect('/login');
+    }
     res.sendFile(path.join(__dirname, 'public', 'user-settings.html'));
 });
 
