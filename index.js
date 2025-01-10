@@ -280,88 +280,111 @@ try {
             const { date, time, guests, email, name } = req.body;
             
             try {
-                // Check capacity first
-                const settingRow = db.prepare('SELECT value FROM settings WHERE key = ?').get('daily_max_guests');
-                const maxGuests = parseInt(settingRow.value);
-
-                const totalRow = db.prepare('SELECT SUM(guests) as total FROM reservations WHERE date = ?').get(date);
-                const currentTotal = totalRow.total || 0;
-
-                // Check if new reservation would exceed capacity
-                if (currentTotal + parseInt(guests) > maxGuests) {
-                    return res.status(400).json({
-                        success: false,
-                        message: `Sorry, we don't have enough capacity for ${guests} guests on this date. Remaining capacity: ${maxGuests - currentTotal}`
-                    });
-                }
-
-                // Check for existing reservation
-                const checkStmt = db.prepare(`
-                    SELECT id FROM reservations 
-                    WHERE date = ? AND time = ? 
-                    AND (email = ? OR email = (SELECT email FROM users WHERE id = ?))
-                    AND status != 'cancelled'
-                `);
-                
-                const existing = checkStmt.get(date, time, email, req.session?.user?.id);
-                if (existing) {
-                    log.info('Duplicate reservation detected:', {
-                        existingId: existing.id,
-                        date,
-                        time,
-                        email,
-                        userId: req.session?.user?.id
-                    });
-                    return res.status(400).json({
-                        success: false,
-                        message: 'You already have a reservation for this date and time.'
-                    });
-                }
-                
-                // Add the reservation
-                const insertStmt = db.prepare(`
-                    INSERT INTO reservations (date, time, guests, email, name, status, created_at)
-                    VALUES (?, ?, ?, ?, ?, 'pending', datetime('now'))
-                `);
-                
-                const result = insertStmt.run(date, time, guests, email, name);
-                log.info('Reservation saved:', result);
+                // Start a transaction
+                db.prepare('BEGIN TRANSACTION').run();
                 
                 try {
-                    await sendEmail(email, 'confirmation', {
-                        id: result.lastInsertRowid,
-                        date,
-                        time,
-                        guests,
-                        name,
-                        email
+                    // Check capacity first, excluding cancelled reservations
+                    const settingRow = db.prepare('SELECT value FROM settings WHERE key = ?').get('daily_max_guests');
+                    const maxGuests = parseInt(settingRow.value);
+
+                    const totalRow = db.prepare(`
+                        SELECT SUM(guests) as total 
+                        FROM reservations 
+                        WHERE date = ? 
+                        AND status != 'cancelled'
+                    `).get(date);
+                    const currentTotal = totalRow.total || 0;
+
+                    // Check if new reservation would exceed capacity
+                    if (currentTotal + parseInt(guests) > maxGuests) {
+                        db.prepare('ROLLBACK').run();
+                        return res.status(400).json({
+                            success: false,
+                            message: `Sorry, we don't have enough capacity for ${guests} guests on this date. Remaining capacity: ${maxGuests - currentTotal}`
+                        });
+                    }
+
+                    // Check for existing active reservation
+                    const checkStmt = db.prepare(`
+                        SELECT id FROM reservations 
+                        WHERE date = ? 
+                        AND time = ? 
+                        AND (email = ? OR email = (SELECT email FROM users WHERE id = ?))
+                        AND status NOT IN ('cancelled')
+                        AND created_at > datetime('now', '-1 hour')
+                    `);
+                    
+                    const existing = checkStmt.get(date, time, email, req.session?.user?.id);
+                    if (existing) {
+                        db.prepare('ROLLBACK').run();
+                        log.info('Duplicate reservation detected:', {
+                            existingId: existing.id,
+                            date,
+                            time,
+                            email,
+                            userId: req.session?.user?.id
+                        });
+                        return res.status(400).json({
+                            success: false,
+                            message: 'You already have an active reservation for this date and time.'
+                        });
+                    }
+                    
+                    // Add the reservation
+                    const insertStmt = db.prepare(`
+                        INSERT INTO reservations (date, time, guests, email, name, status, created_at)
+                        VALUES (?, ?, ?, ?, ?, 'pending', datetime('now'))
+                    `);
+                    
+                    const result = insertStmt.run(date, time, guests, email, name);
+                    log.info('Reservation saved:', result);
+                    
+                    try {
+                        await sendEmail(email, 'confirmation', {
+                            id: result.lastInsertRowid,
+                            date,
+                            time,
+                            guests,
+                            name,
+                            email
+                        });
+                        
+                        // Update email status
+                        db.prepare(`
+                            UPDATE reservations 
+                            SET email_status = 'sent',
+                                email_sent_at = datetime('now')
+                            WHERE id = ?
+                        `).run(result.lastInsertRowid);
+                        
+                    } catch (emailError) {
+                        log.error('Email sending failed:', emailError);
+                        
+                        // Update email status with error
+                        db.prepare(`
+                            UPDATE reservations 
+                            SET email_status = 'failed',
+                                email_error = ?
+                            WHERE id = ?
+                        `).run(emailError.message, result.lastInsertRowid);
+                    }
+                    
+                    // Commit the transaction
+                    db.prepare('COMMIT').run();
+                    
+                    res.json({
+                        success: true,
+                        message: 'Reservation confirmed',
+                        id: result.lastInsertRowid
                     });
                     
-                    // Update email status
-                    db.prepare(`
-                        UPDATE reservations 
-                        SET email_status = 'sent',
-                            email_sent_at = datetime('now')
-                        WHERE id = ?
-                    `).run(result.lastInsertRowid);
-                    
-                } catch (emailError) {
-                    log.error('Email sending failed:', emailError);
-                    
-                    // Update email status with error
-                    db.prepare(`
-                        UPDATE reservations 
-                        SET email_status = 'failed',
-                            email_error = ?
-                        WHERE id = ?
-                    `).run(emailError.message, result.lastInsertRowid);
+                } catch (err) {
+                    // Rollback on error
+                    db.prepare('ROLLBACK').run();
+                    throw err;
                 }
                 
-                res.json({
-                    success: true,
-                    message: 'Reservation confirmed',
-                    id: result.lastInsertRowid
-                });
             } catch (err) {
                 log.error('Error saving reservation:', err);
                 res.status(500).json({
