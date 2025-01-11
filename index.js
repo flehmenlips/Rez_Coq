@@ -312,18 +312,18 @@ try {
                         AND time = ? 
                         AND (email = ? OR email = (SELECT email FROM users WHERE id = ?))
                         AND status NOT IN ('cancelled')
-                        AND created_at > datetime('now', '-1 hour')
                     `);
                     
                     const existing = checkStmt.get(date, time, email, req.session?.user?.id);
                     if (existing) {
                         db.prepare('ROLLBACK').run();
-                        log.info('Duplicate reservation detected:', {
+                        log.warn('Duplicate reservation attempt:', {
                             existingId: existing.id,
                             date,
                             time,
                             email,
-                            userId: req.session?.user?.id
+                            userId: req.session?.user?.id,
+                            requestBody: req.body
                         });
                         return res.status(400).json({
                             success: false,

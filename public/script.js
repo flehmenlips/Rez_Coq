@@ -172,21 +172,30 @@ document.addEventListener('DOMContentLoaded', async function() {
 
     // Initialize form submission
     const form = document.getElementById('reservationForm');
+    const submitButton = document.getElementById('submitButton');
+    let isSubmitting = false;
+
     form.addEventListener('submit', async function(e) {
         e.preventDefault();
-        const submitButton = document.getElementById('submitButton');
+        
+        if (isSubmitting) {
+            console.log('Form is already being submitted');
+            return;
+        }
+
+        isSubmitting = true;
         submitButton.disabled = true;
         submitButton.innerHTML = '<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Processing...';
 
-        try {
-            const formData = {
-                date: document.getElementById('date').value,
-                time: document.getElementById('time').value,
-                guests: document.getElementById('guests').value,
-                name: document.getElementById('name').value,
-                email: document.getElementById('email').value
-            };
+        const formData = {
+            date: document.getElementById('date').value,
+            time: document.getElementById('time').value,
+            guests: document.getElementById('guests').value,
+            email: document.getElementById('email').value,
+            name: document.getElementById('name').value
+        };
 
+        try {
             const response = await fetch('/api/reservations', {
                 method: 'POST',
                 headers: {
@@ -196,7 +205,7 @@ document.addEventListener('DOMContentLoaded', async function() {
             });
 
             const result = await response.json();
-
+            
             if (result.success) {
                 // Show confirmation modal with reservation details
                 const modal = new bootstrap.Modal(document.getElementById('confirmationModal'));
@@ -215,7 +224,7 @@ document.addEventListener('DOMContentLoaded', async function() {
                         <p class="mb-0">A confirmation email will be sent to your email address.</p>
                     </div>
                 `;
-                
+
                 // Add event listener for when modal is hidden
                 const confirmationModal = document.getElementById('confirmationModal');
                 confirmationModal.addEventListener('hidden.bs.modal', function () {
@@ -233,6 +242,7 @@ document.addEventListener('DOMContentLoaded', async function() {
             document.getElementById('errorMessage').textContent = error.message || 'Failed to create reservation. Please try again.';
             errorModal.show();
         } finally {
+            isSubmitting = false;
             submitButton.disabled = false;
             submitButton.innerHTML = 'Complete Reservation';
         }
