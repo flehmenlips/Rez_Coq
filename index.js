@@ -593,6 +593,10 @@ try {
         const authRouter = authRoutes(db);
         app.use('/api/auth', authRouter);
 
+        // Add reservations routes
+        const reservationsRouter = require('./routes/reservations');
+        app.use('/api/reservations', reservationsRouter);
+
         // Protect dashboard routes
         app.use('/dashboard', auth);
         app.use('/api/settings', auth);
@@ -611,22 +615,6 @@ try {
                 return res.redirect('/dashboard');
             }
             res.sendFile(path.join(__dirname, 'public', 'register.html'));
-        });
-
-        // Add this with your other routes
-        app.get('/api/reservations/my-reservations', auth, (req, res) => {
-            try {
-                const stmt = db.prepare(`
-                    SELECT * FROM reservations 
-                    WHERE email = (SELECT email FROM users WHERE id = ?)
-                    ORDER BY date, time
-                `);
-                const rows = stmt.all(req.session.user.id);
-                res.json(rows);
-            } catch (err) {
-                log.error('Error retrieving user reservations:', err);
-                res.status(500).json({ error: 'Error retrieving reservations' });
-            }
         });
 
         // Add this with your other routes

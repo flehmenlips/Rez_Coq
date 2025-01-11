@@ -1,11 +1,12 @@
 const express = require('express');
 const router = express.Router();
 const { query } = require('../utils/db');
+const log = require('../utils/logger');
 
 // Get available times
 router.get('/available-times', async (req, res) => {
     try {
-        console.log('Fetching available times');
+        log.info('Fetching available times');
         
         // Get settings in a single query
         const settingsResult = await query(`
@@ -23,7 +24,7 @@ router.get('/available-times', async (req, res) => {
             slot_duration: '60'
         });
 
-        console.log('Settings loaded:', settings);
+        log.info('Settings loaded:', settings);
 
         // Parse times
         const openTime = settings.opening_time;
@@ -31,7 +32,7 @@ router.get('/available-times', async (req, res) => {
         const duration = parseInt(settings.slot_duration);
 
         if (!openTime || !closeTime || isNaN(duration)) {
-            console.error('Invalid settings:', { openTime, closeTime, duration });
+            log.error('Invalid settings:', { openTime, closeTime, duration });
             return res.status(500).json({
                 success: false,
                 message: 'Invalid time settings'
@@ -52,13 +53,13 @@ router.get('/available-times', async (req, res) => {
             currentTime.setMinutes(currentTime.getMinutes() + duration);
         }
 
-        console.log(`Generated ${slots.length} time slots`);
+        log.info(`Generated ${slots.length} time slots`);
         res.json({
             success: true,
             slots: slots
         });
     } catch (error) {
-        console.error('Error getting available times:', error);
+        log.error('Error getting available times:', error);
         res.status(500).json({ 
             success: false,
             message: 'Failed to get available times',
@@ -70,12 +71,10 @@ router.get('/available-times', async (req, res) => {
 // Get all reservations
 router.get('/', async (req, res) => {
     try {
-        const result = await query(
-            'SELECT * FROM reservations ORDER BY date, time'
-        );
+        const result = await query('SELECT * FROM reservations ORDER BY date, time');
         res.json(result.rows);
     } catch (error) {
-        console.error('Error fetching reservations:', error);
+        log.error('Error fetching reservations:', error);
         res.status(500).json({ 
             success: false,
             message: 'Failed to fetch reservations',
@@ -101,7 +100,7 @@ router.get('/my-reservations', async (req, res) => {
 
         res.json(result.rows);
     } catch (error) {
-        console.error('Error fetching user reservations:', error);
+        log.error('Error fetching user reservations:', error);
         res.status(500).json({
             success: false,
             message: 'Failed to fetch reservations',
@@ -143,8 +142,8 @@ router.post('/', async (req, res) => {
 
         // Get total guests for the day
         const existingReservations = await query(
-            'SELECT COALESCE(SUM(guests), 0) as total_guests FROM reservations WHERE date = $1',
-            [date]
+            'SELECT COALESCE(SUM(guests), 0) as total_guests FROM reservations WHERE date = $1 AND status != $2',
+            [date, 'cancelled']
         );
 
         const currentTotal = parseInt(existingReservations.rows[0].total_guests);
@@ -158,11 +157,35 @@ router.post('/', async (req, res) => {
             });
         }
 
+        // Check for existing active reservation
+        const existingResult = await query(`
+            SELECT id FROM reservations 
+            WHERE date = $1 
+            AND time = $2 
+            AND (email = $3 OR email = (SELECT email FROM users WHERE id = $4))
+            AND status NOT IN ('cancelled')
+        `, [date, time, email, req.session?.user?.id]);
+
+        if (existingResult.rows.length > 0) {
+            log.warn('Duplicate reservation attempt:', {
+                existingId: existingResult.rows[0].id,
+                date,
+                time,
+                email,
+                userId: req.session?.user?.id,
+                requestBody: req.body
+            });
+            return res.status(400).json({
+                success: false,
+                message: 'You already have an active reservation for this date and time.'
+            });
+        }
+
         // Create the reservation
         const result = await query(
             `INSERT INTO reservations 
-             (name, email, phone, date, time, guests, status, email_status)
-             VALUES ($1, $2, $3, $4, $5, $6, $7, $8) 
+             (name, email, phone, date, time, guests, status, email_status, created_at)
+             VALUES ($1, $2, $3, $4, $5, $6, $7, $8, NOW()) 
              RETURNING *`,
             [name, email, phone, date, time, parseInt(guests), 'pending', 'pending']
         );
@@ -170,10 +193,10 @@ router.post('/', async (req, res) => {
         res.json({
             success: true,
             message: 'Reservation created successfully',
-            reservation: result.rows[0]
+            id: result.rows[0].id
         });
     } catch (error) {
-        console.error('Error creating reservation:', error);
+        log.error('Error creating reservation:', error);
         res.status(500).json({
             success: false,
             message: 'Failed to create reservation',
@@ -224,7 +247,7 @@ router.put('/:id', async (req, res) => {
             reservation: result.rows[0]
         });
     } catch (error) {
-        console.error('Error updating reservation:', error);
+        log.error('Error updating reservation:', error);
         res.status(500).json({
             success: false,
             message: 'Failed to update reservation',
