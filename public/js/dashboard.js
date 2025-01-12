@@ -534,4 +534,60 @@ function showError(message) {
 
 function showSuccess(message) {
     showAlert(message, 'success');
+}
+
+// Database content viewing functions
+async function viewDatabaseContent() {
+    const modal = new bootstrap.Modal(document.getElementById('databaseContentModal'));
+    modal.show();
+    await refreshDatabaseContent();
+}
+
+async function refreshDatabaseContent() {
+    try {
+        // Fetch reservations
+        const reservationsResponse = await fetch('/admin/db/reservations');
+        const reservations = await reservationsResponse.json();
+        const reservationsTableBody = document.getElementById('reservationsTableBody');
+        reservationsTableBody.innerHTML = reservations.map(r => `
+            <tr>
+                <td>${r.id}</td>
+                <td>${r.name}</td>
+                <td>${r.email}</td>
+                <td>${r.date}</td>
+                <td>${r.time}</td>
+                <td>${r.guests}</td>
+                <td>${r.status || 'pending'}</td>
+                <td>${new Date(r.created_at).toLocaleString()}</td>
+            </tr>
+        `).join('');
+
+        // Fetch users
+        const usersResponse = await fetch('/admin/db/users');
+        const users = await usersResponse.json();
+        const usersTableBody = document.getElementById('usersTableBody');
+        usersTableBody.innerHTML = users.map(u => `
+            <tr>
+                <td>${u.id}</td>
+                <td>${u.username}</td>
+                <td>${u.email}</td>
+                <td>${u.role}</td>
+                <td>${new Date(u.created_at).toLocaleString()}</td>
+            </tr>
+        `).join('');
+
+        // Fetch settings
+        const settingsResponse = await fetch('/admin/db/settings');
+        const settings = await settingsResponse.json();
+        const settingsTableBody = document.getElementById('settingsTableBody');
+        settingsTableBody.innerHTML = settings.map(s => `
+            <tr>
+                <td>${s.key}</td>
+                <td>${s.value}</td>
+            </tr>
+        `).join('');
+    } catch (error) {
+        console.error('Error fetching database content:', error);
+        alert('Error fetching database content. Please try again.');
+    }
 } 

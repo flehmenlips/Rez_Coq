@@ -1,6 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const { query } = require('../utils/db');
+const log = require('../utils/logger');
 
 // Get all users
 router.get('/users', async (req, res) => {
@@ -187,6 +188,37 @@ router.delete('/reservations/:id', async (req, res) => {
             message: 'Failed to delete reservation',
             error: error.message
         });
+    }
+});
+
+// Add database content routes
+router.get('/db/reservations', async (req, res) => {
+    try {
+        const result = await query('SELECT * FROM reservations ORDER BY created_at DESC');
+        res.json(result.rows);
+    } catch (error) {
+        log.error('Error fetching reservations:', error);
+        res.status(500).json({ error: 'Failed to fetch reservations' });
+    }
+});
+
+router.get('/db/users', async (req, res) => {
+    try {
+        const result = await query('SELECT id, username, email, role, created_at FROM users ORDER BY created_at DESC');
+        res.json(result.rows);
+    } catch (error) {
+        log.error('Error fetching users:', error);
+        res.status(500).json({ error: 'Failed to fetch users' });
+    }
+});
+
+router.get('/db/settings', async (req, res) => {
+    try {
+        const result = await query('SELECT * FROM settings ORDER BY key');
+        res.json(result.rows);
+    } catch (error) {
+        log.error('Error fetching settings:', error);
+        res.status(500).json({ error: 'Failed to fetch settings' });
     }
 });
 
